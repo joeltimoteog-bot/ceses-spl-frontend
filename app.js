@@ -52,10 +52,10 @@ const badgeEst = e => {
 
 // ---------- navegación ----------
 const TITULOS = {
-  inicio: ['Inicio', 'Estado general del sistema'],
-  dni: ['Buscar DNI', 'Ficha del trabajador, antigüedad e historial'],
+  inicio: ['Inicio', 'Resumen ejecutivo del sistema'],
+  dni: ['Buscar trabajador', 'Ficha del trabajador, antigüedad e historial'],
   registro: ['Registro masivo', 'Suspensiones, finiquitos y sin efecto por lote'],
-  resumen: ['Resumen por Fecha Doc.', 'Lo programado por sector, firmas y correo'],
+  resumen: ['Programaciones', 'Lo programado por sector, firmas y correo'],
   responsables: ['Responsables', 'Analista y supervisor por fundo'],
 };
 function ir(p) {
@@ -63,13 +63,19 @@ function ir(p) {
   document.querySelectorAll('.pantalla').forEach(s => s.classList.toggle('activa', s.id === 'p-' + p));
   document.querySelectorAll('.menu a[data-p]').forEach(a => a.classList.toggle('active', a.dataset.p === p));
   $('#titulo').textContent = TITULOS[p][0]; $('#subtitulo').textContent = TITULOS[p][1];
-  document.getElementById('sidebar').classList.remove('open');
+  cerrarMenu();
   const c = $('.content'); c.style.animation = 'none'; void c.offsetWidth; c.style.animation = '';
+  window.scrollTo({ top: 0 });
   if (p === 'inicio') cargarInicio();
   if (p === 'responsables') cargarResp();
   if (p === 'registro') cargarCatalogos();
 }
 document.querySelectorAll('.menu a[data-p]').forEach(a => a.onclick = e => { e.preventDefault(); ir(a.dataset.p); location.hash = a.dataset.p; });
+// menú lateral: móvil (hamburguesa) y escritorio (contraer)
+function abrirMenu() { $('#sidebar').classList.add('open'); $('#backdrop').classList.add('show'); }
+function cerrarMenu() { $('#sidebar').classList.remove('open'); $('#backdrop').classList.remove('show'); }
+function toggleSidebar() { const mini = document.body.classList.toggle('sb-mini'); try { localStorage.setItem('ceses_sb', mini ? '1' : '0'); } catch {} }
+try { if (localStorage.getItem('ceses_sb') === '1') document.body.classList.add('sb-mini'); } catch {}
 async function salir() { await api('/api/logout', { method: 'POST' }); location.href = 'index.html'; }
 
 // ---------- inicio ----------
@@ -77,18 +83,19 @@ async function cargarInicio() {
   const e = await api('/api/estado');
   const tot = e.trabajadores.reduce((s, t) => s + t.n, 0);
   $('#kpis').innerHTML = [
-    ['Trabajadores en base', tot.toLocaleString('es-PE'), 'bi-people-fill', 'g1'],
-    ['Registros históricos', e.programacion.n.toLocaleString('es-PE'), 'bi-archive-fill', 'g2'],
-    ['Última Fecha Doc.', dmy(e.programacion.ultima) || '—', 'bi-calendar-event-fill', 'g3'],
-    ['Programados hoy', e.hoy, 'bi-calendar-check-fill', 'g4'],
-  ].map(([t, v, i, g]) => `<div class="col-6 col-lg-3"><div class="kpi-card ${g}"><div class="lbl">${t}</div><div class="val">${v}</div><i class="bi ${i} bg"></i></div></div>`).join('');
+    ['Trabajadores en base', tot.toLocaleString('es-PE'), 'bi-people-fill', 'b'],
+    ['Registros históricos', e.programacion.n.toLocaleString('es-PE'), 'bi-archive-fill', 'n'],
+    ['Última fecha documentada', dmy(e.programacion.ultima) || '—', 'bi-calendar-event-fill', 'g'],
+    ['Programados para hoy', e.hoy, 'bi-calendar-check-fill', 'k'],
+  ].map(([t, v, i, c]) => `<div class="kpi"><div class="ic ${c}"><i class="bi ${i}"></i></div><div><div class="lbl">${t}</div><div class="val">${v}</div></div></div>`).join('');
   $('#tSync tbody').innerHTML = ['VERFRUT', 'RAPEL'].map(emp => {
     const t = e.trabajadores.find(x => x.empresa === emp) || { n: 0 };
     const s = e.sync.find(x => x.empresa === emp);
-    return `<tr><td><span class="badge rounded-pill" style="background:var(--navy)">${emp}</span></td><td><b>${t.n.toLocaleString('es-PE')}</b></td><td>${s ? '<i class="bi bi-check-circle-fill text-success"></i> ' + s.fecha : '<span class="text-danger">nunca</span>'}</td></tr>`;
+    const est = s ? '<span class="st ok"><i class="bi bi-check-circle-fill"></i> Sincronizada</span>' : '<span class="st bad"><i class="bi bi-exclamation-circle-fill"></i> Sin sincronizar</span>';
+    return `<tr><td><span class="emp-tag">${emp}</span></td><td><b>${t.n.toLocaleString('es-PE')}</b></td><td>${s ? esc(s.fecha) : '<span class="text-muted">nunca</span>'}</td><td>${est}</td></tr>`;
   }).join('');
   const f = await api('/api/programacion/fechas');
-  $('#tFechas tbody').innerHTML = f.slice(0, 15).map(x => `<tr><td>${dmy(x.fecha_doc)}</td><td>${x.n}</td><td>${x.fin}</td><td>${x.sus}</td><td><a href="#" class="btn btn-sm btn-outline-primary py-0" onclick="verFecha('${x.fecha_doc}');return false"><i class="bi bi-eye"></i> Ver</a></td></tr>`).join('');
+  $('#tFechas tbody').innerHTML = f.slice(0, 5).map(x => `<tr><td><b>${dmy(x.fecha_doc)}</b></td><td>${x.n}</td><td>${x.fin}</td><td>${x.sus}</td><td class="text-end"><button class="btn-ico" title="Ver programación" onclick="verFecha('${x.fecha_doc}')"><i class="bi bi-arrow-right"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin programaciones registradas</td></tr>';
 }
 async function subirExcel(inp) {
   const f = inp.files[0]; if (!f) return;
@@ -110,28 +117,32 @@ function excelHistorial() { if (dniAct) descargar({ dni: dniAct }).catch(e => al
 async function buscarDNI() {
   const dni = $('#dniIn').value.trim();
   $('#dniErr').textContent = ''; $('#ficha').innerHTML = ''; $('#tHist tbody').innerHTML = ''; $('#hResumen').innerHTML = ''; $('#hCount').textContent = ''; $('#btnHistXls').style.display = 'none';
-  if (!dni) return;
+  if (!dni) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> Ingresa un número de DNI'; return; }
+  if (!/^\d{6,12}$/.test(dni)) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> El DNI debe contener solo números'; return; }
+  const btnB = $('#btnBuscar'); btnB.classList.add('loading'); btnB.disabled = true;
   try {
     const t = await api('/api/trabajador/' + dni);
     const a = t.antiguedad;
-    const estCls = t.estado === 'INDETERMINADO' ? 'text-danger fw-bold' : t.estado === 'PERIODO DE PRUEBA' ? 'text-primary' : '';
-    const aviso = t.en_base ? '' : `<div class="alert alert-warning py-2 small mb-2"><i class="bi bi-exclamation-triangle-fill"></i> <b>No está en la base activa VERFRUT / RAPEL</b> (cesado o no vigente). Último registro: ${badgeEst(t.ultimo_estatus)} ${dmy(t.ultimo_registro)}. Ficha tomada de su historial.</div>`;
-    const reg = t.regimen_clasificado === 'EMPLEADO' ? '<span class="badge bg-purple" style="background:#6a1b9a">EMPLEADO — excluido</span>' : t.regimen_clasificado === 'OBRERO' ? '<span class="badge bg-success">OBRERO</span>' : '<span class="badge bg-warning text-dark">POR DEFINIR</span>';
-    $('#ficha').innerHTML = `${aviso}
-      <div class="ficha-nombre">${esc(t.nombre_completo)}</div>
-      <div class="mb-2"><span class="badge rounded-pill" style="background:var(--navy)">${esc(t.empresa)}</span> ${t.en_base ? reg : '<span class="badge text-bg-secondary">NO VIGENTE</span>'}</div>
-      <table class="table table-sm tbl m-0">
-        <tr><th>Cargo</th><td>${esc(t.cargo)}</td></tr>
-        <tr><th>Fundo</th><td>${esc(t.centro_costo)}</td></tr>
-        <tr><th>Régimen</th><td>${esc(t.regimen)}</td></tr>
-        <tr><th>F. inicio</th><td>${dmy(t.fecha_inicio_periodo)}</td></tr>
-        <tr><th>Renov. / Término</th><td>${dmy(t.fecha_inicio_contrato)} → ${dmy(t.fecha_termino_contrato)}</td></tr>
-        <tr><th>Antigüedad</th><td>${a.anios}a ${a.meses}m ${a.dias}d</td></tr>
-        <tr><th>Estado</th><td class="${estCls}">${esc(t.estado)}</td></tr>
-        <tr><th>Susp. acumulada ${new Date().getFullYear()}</th><td>${t.acum_anual} días</td></tr>
-        <tr><th>Dirección</th><td class="text-wrap">${esc(t.direccion)} — ${esc(t.provincia)}</td></tr>
-        <tr><th>Base actualizada</th><td>${esc(t.sincronizado_en || '—')}</td></tr>
-      </table>`;
+    const estCls = t.estado === 'INDETERMINADO' ? 'danger' : t.estado === 'PERIODO DE PRUEBA' ? 'info' : '';
+    const aviso = t.en_base ? '' : `<div class="alert alert-warning py-2 small mb-3"><i class="bi bi-exclamation-triangle-fill"></i> <b>No está en la base activa VERFRUT / RAPEL</b> (cesado o no vigente). Último registro: ${badgeEst(t.ultimo_estatus)} ${dmy(t.ultimo_registro)}. Ficha tomada de su historial.</div>`;
+    const reg = t.regimen_clasificado === 'EMPLEADO' ? '<span class="st purple">EMPLEADO — excluido</span>' : t.regimen_clasificado === 'OBRERO' ? '<span class="st ok">OBRERO</span>' : '<span class="st warn">POR DEFINIR</span>';
+    const ini = (t.nombre_completo || '?').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
+    const item = (k, v, ic, cls = '') => `<div class="f-item ${cls}"><div class="k"><i class="bi ${ic}"></i>${k}</div><div class="v">${v || '—'}</div></div>`;
+    $('#ficha').innerHTML = `<div class="card p-3 ficha">${aviso}
+      <div class="f-head"><div class="f-av">${esc(ini)}</div><div><div class="ficha-nombre">${esc(t.nombre_completo)}</div>
+        <div class="f-tags"><span class="emp-tag">${esc(t.empresa)}</span> ${t.en_base ? reg : '<span class="st gris">NO VIGENTE</span>'} <span class="st info">DNI ${esc(dni)}</span></div></div></div>
+      <div class="f-grid">
+        ${item('Cargo', esc(t.cargo), 'bi-briefcase-fill')}
+        ${item('Fundo', esc(t.centro_costo), 'bi-geo-alt-fill')}
+        ${item('Régimen', esc(t.regimen), 'bi-file-earmark-text-fill')}
+        ${item('Estado contractual', esc(t.estado), 'bi-shield-fill-check', estCls)}
+        ${item('Fecha de inicio', dmy(t.fecha_inicio_periodo), 'bi-calendar-plus-fill')}
+        ${item('Renovación / Término', `${dmy(t.fecha_inicio_contrato)} → ${dmy(t.fecha_termino_contrato)}`, 'bi-calendar-range-fill')}
+        ${item('Antigüedad', `${a.anios}a ${a.meses}m ${a.dias}d`, 'bi-hourglass-split')}
+        ${item(`Susp. acumulada ${new Date().getFullYear()}`, `${t.acum_anual} días`, 'bi-pause-circle-fill', t.acum_anual > 90 ? 'danger' : '')}
+        ${item('Dirección', `${esc(t.direccion)} — ${esc(t.provincia)}`, 'bi-house-fill', 'span2')}
+        ${item('Base actualizada', esc(t.sincronizado_en || '—'), 'bi-database-fill-check', 'span2')}
+      </div></div>`;
     histAct = t.historial; dniAct = dni;
     $('#hCount').textContent = `(${t.historial.length} registros)`;
     $('#btnHistXls').style.display = t.historial.length ? '' : 'none';
@@ -145,8 +156,9 @@ async function buscarDNI() {
       <td>${esc(h.fundo)}</td><td>${esc(h.cargo)}</td><td class="${/INDETERMINADO/i.test(h.estado || '') ? 'text-danger fw-bold' : ''}">${esc(h.estado)}</td><td>${h.anios ?? ''}a ${h.meses ?? ''}m ${h.dias ?? ''}d</td>
       <td>${dmy(h.f_inicio)}</td><td>${dmy(h.f_renovacion)}</td><td>${dmy(h.f_termino)}</td>
       <td>${dmy(h.fecha_inicio_sl)}</td><td>${dmy(h.fecha_fin_sl)}</td><td>${dmy(h.fecha_retorno)}</td><td>${h.cant_dias ?? ''}</td><td>${esc(h.estado_retorno)}</td><td>${esc(h.status02)}</td><td>${dmy(h.fecha_pago)}</td>
-      <td class="text-wrap" style="min-width:220px;max-width:380px;font-size:12px">${esc(h.observacion)}</td><td>${esc(h.responsable_sector)}</td><td>${esc(h.apoyos)}</td><td>${esc(h.horario_firma)}</td><td>${esc(h.origen)}</td><td class="text-muted">${esc(h.creado_en)}</td></tr>`).join('') || '<tr><td colspan="31" class="empty">Sin programaciones previas</td></tr>';
-  } catch (e) { $('#dniErr').textContent = e.message; }
+      <td class="text-wrap" style="min-width:220px;max-width:380px;font-size:12px">${esc(h.observacion)}</td><td>${esc(h.responsable_sector)}</td><td>${esc(h.apoyos)}</td><td>${esc(h.horario_firma)}</td><td>${esc(h.origen)}</td><td class="text-muted">${esc(h.creado_en)}</td></tr>`).join('') || '<tr><td colspan="31" class="empty"><i class="bi bi-inbox"></i>Sin programaciones previas</td></tr>';
+  } catch (e) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> ' + esc(e.message); }
+  btnB.classList.remove('loading'); btnB.disabled = false;
 }
 $('#dniIn').addEventListener('keydown', e => { if (e.key === 'Enter') buscarDNI(); });
 
@@ -176,18 +188,21 @@ function datosLote() {
   };
 }
 let previaOK = false;
+function paso(n) { document.querySelectorAll('.stepper .stp').forEach((s, i) => s.classList.toggle('on', i < n)); }
 async function validar() {
-  $('#rErr').textContent = ''; previaOK = false; $('#btnGrabar').disabled = true;
+  $('#rErr').textContent = ''; previaOK = false; $('#btnGrabar').disabled = true; paso(2);
   try {
     const v = await api('/api/programacion/validar', { method: 'POST', body: JSON.stringify(datosLote()) });
     pintarPrevia(v);
-    previaOK = v.filas.length > 0; $('#btnGrabar').disabled = !previaOK;
+    previaOK = v.filas.length > 0; $('#btnGrabar').disabled = !previaOK; if (previaOK) paso(3);
   } catch (e) { $('#rErr').textContent = e.message; }
 }
 function pintarPrevia(v) {
   const f = v.filas;
   const nExc = f.filter(x => x.excluido).length;
-  $('#rTot').innerHTML = `${f.length} encontrados · <b>${f.length - nExc}</b> a grabar · ${nExc} excluidos · ${v.noEncontrados.length} no encontrados`;
+  const nAl = f.reduce((s, x) => s + x.alertas.length, 0);
+  $('#rTot').innerHTML = [['Encontrados', f.length, ''], ['A grabar', f.length - nExc, 'ok'], ['Excluidos', nExc, 'gris'], ['No encontrados', v.noEncontrados.length, v.noEncontrados.length ? 'bad' : ''], ['Alertas', nAl, nAl ? 'bad' : '']]
+    .map(([t, n, c]) => `<span class="stat-chip ${c}"><b>${n}</b> ${t}</span>`).join('');
   // alertas por fundo (solo cantidades)
   const porTipo = {};
   for (const x of f) for (const a of x.alertas) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + 1;
@@ -212,7 +227,7 @@ async function grabar() {
     const al = Object.entries(r.alertasPorFundo);
     if (al.length) msg += '\n\nAlertas por fundo:\n' + al.map(([f, t]) => `  ${f}: ` + Object.entries(t).map(([k, n]) => `${k}=${n}`).join(', ')).join('\n');
     alert(msg);
-    $('#rDnis').value = ''; $('#tPrev tbody').innerHTML = ''; $('#rAlertas').innerHTML = ''; $('#rTot').innerHTML = ''; previaOK = false;
+    $('#rDnis').value = ''; $('#tPrev tbody').innerHTML = '<tr><td colspan="11" class="empty"><i class="bi bi-check2-circle"></i>Lote grabado. Completa un nuevo lote y presiona <b>Validar información</b></td></tr>'; $('#rAlertas').innerHTML = ''; $('#rTot').innerHTML = ''; previaOK = false; paso(1);
   } catch (e) { $('#rErr').textContent = e.message; $('#btnGrabar').disabled = false; }
 }
 
@@ -249,7 +264,7 @@ async function cargarResumen() {
   $('#tSus tbody').innerHTML = r.suspensiones.map(s => `<tr><td>${esc(s.fundo)}</td><td>${dmy(s.inicio)}</td><td>${dmy(s.fin)}</td><td>${s.dias}</td><td><b>${s.cant}</b></td></tr>`).join('') || '<tr><td colspan="5" class="text-muted">—</td></tr>';
   const det = await api('/api/programacion?fechas=' + q);
   $('#dCount').textContent = `(${det.length})`;
-  $('#tDet tbody').innerHTML = det.map(d => `<tr><td>${d.dni}</td><td>${esc(d.nombres)}</td><td>${esc(d.empresa)}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${badgeEst(d.estatus)}</td><td>${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap">${esc(d.observacion)}</td><td><a href="#" class="text-danger" title="Eliminar" onclick="eliminar(${d.id});return false"><i class="bi bi-trash"></i></a></td></tr>`).join('');
+  $('#tDet tbody').innerHTML = det.map(d => `<tr><td>${d.dni}</td><td>${esc(d.nombres)}</td><td>${esc(d.empresa)}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${badgeEst(d.estatus)}</td><td>${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap">${esc(d.observacion)}</td><td class="text-end"><button class="btn-ico danger" title="Eliminar" onclick="eliminar(${d.id})"><i class="bi bi-trash"></i></button></td></tr>`).join('') || '<tr><td colspan="14" class="empty">Sin registros para esa(s) fecha(s)</td></tr>';
 }
 function pintarDinamica(r) {
   const fechas = r.fechas;
@@ -336,9 +351,9 @@ async function enviarCorreo() {
 async function cargarResp() {
   const r = await api('/api/responsables');
   $('#tResp tbody').innerHTML = r.map(x => `<tr><td><b>${esc(x.fundo)}</b></td><td>${esc(x.analista)}</td><td>${esc(x.correo_analista)}</td><td>${esc(x.supervisor)}</td><td>${esc(x.correo_supervisor)}</td>
-    <td><a href="#" onclick='editarResp(${JSON.stringify(x)});return false'><i class="bi bi-pencil"></i></a></td></tr>`).join('');
+    <td class="text-end"><button class="btn-ico" title="Editar" onclick='editarResp(${JSON.stringify(x)})'><i class="bi bi-pencil-fill"></i></button></td></tr>`).join('') || '<tr><td colspan="6" class="empty">Sin responsables registrados</td></tr>';
 }
-function editarResp(x) { $('#nFundo').value = x.fundo; $('#nAna').value = x.analista || ''; $('#nAnaC').value = x.correo_analista || ''; $('#nSup').value = x.supervisor || ''; $('#nSupC').value = x.correo_supervisor || ''; }
+function editarResp(x) { $('#nFundo').value = x.fundo; $('#nAna').value = x.analista || ''; $('#nAnaC').value = x.correo_analista || ''; $('#nSup').value = x.supervisor || ''; $('#nSupC').value = x.correo_supervisor || ''; $('#nAna').focus(); $('#nFundo').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
 async function guardarResp() {
   await api('/api/responsables', { method: 'PUT', body: JSON.stringify({ fundo: $('#nFundo').value, analista: $('#nAna').value, correo_analista: $('#nAnaC').value, supervisor: $('#nSup').value, correo_supervisor: $('#nSupC').value }) });
   ['#nFundo', '#nAna', '#nAnaC', '#nSup', '#nSupC'].forEach(s => $(s).value = ''); cargarResp();

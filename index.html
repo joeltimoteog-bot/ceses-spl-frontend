@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Ceses / SPL · Ingreso</title>
+<title>CESES / SPL · Ingreso</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <script src="config.js"></script>
@@ -26,9 +26,21 @@
   /* layout */
   .wrap{position:relative;height:100%;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;max-width:1240px;margin:0 auto;padding:0 48px;gap:40px}
   .brand{animation:in .8s ease both}
-  .logo{width:78px;height:78px;border-radius:22px;background:linear-gradient(145deg,#fff,#dfe7f3);display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.45),inset 0 1px 0 #fff;margin-bottom:26px}
-  .logo img{max-width:100%;max-height:100%;object-fit:contain}
-  .logo .mono{font-weight:900;color:var(--navy2);font-size:28px;letter-spacing:-1px}
+  /* logo CESES / SPL */
+  .logo{display:flex;align-items:center;gap:16px;margin-bottom:26px}
+  .logo svg.lg{width:78px;height:78px;flex-shrink:0;filter:drop-shadow(0 18px 40px rgba(0,0,0,.5));animation:lgFloat 6s ease-in-out infinite}
+  .logo .lg-c{stroke-dasharray:90;stroke-dashoffset:90;animation:lgDraw 1.1s .2s cubic-bezier(.4,0,.2,1) forwards}
+  .logo .lg-s{stroke-dasharray:60;stroke-dashoffset:60;animation:lgDraw .9s .8s cubic-bezier(.4,0,.2,1) forwards}
+  .logo .lg-n{opacity:0;transform-origin:center;transform-box:fill-box;animation:lgPop .5s 1.5s cubic-bezier(.3,1.5,.5,1) forwards,lgPulse 3.2s 2.2s ease-in-out infinite}
+  .logo .lg-n:nth-of-type(2){animation-delay:1.65s,2.4s}
+  .logo .lg-txt b{display:block;font-size:26px;font-weight:900;letter-spacing:-.5px;line-height:1;color:#fff}
+  .logo .lg-txt b i{font-style:normal;color:var(--gold)}
+  .logo .lg-txt span{display:block;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:#9fb3cc;margin-top:6px;font-weight:700}
+  @keyframes lgDraw{to{stroke-dashoffset:0}}
+  @keyframes lgPop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+  @keyframes lgPulse{0%,100%{opacity:1}50%{opacity:.55}}
+  @keyframes lgFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
+  @media (prefers-reduced-motion:reduce){.logo svg.lg,.logo .lg-c,.logo .lg-s,.logo .lg-n{animation:none;stroke-dashoffset:0;opacity:1}}
   .tag{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:999px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#cfe0f5;margin-bottom:18px}
   .tag i{color:var(--gold)}
   h1{font-size:44px;line-height:1.08;font-weight:800;letter-spacing:-.5px;margin-bottom:14px}
@@ -66,7 +78,7 @@
   .copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:11px;color:#7f93ad;letter-spacing:.6px}
   @keyframes in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
   @media (max-width:980px){
-    body{overflow:auto}
+    body{overflow:auto;overflow-x:hidden}
     .wrap{grid-template-columns:1fr;padding:40px 20px 70px;gap:26px;align-content:start}
     h1{font-size:30px}.lead{font-size:14px}.stats{display:none}.card{justify-self:center;padding:30px 24px}.copy{position:static;margin-top:20px}
   }
@@ -78,7 +90,21 @@
 
 <div class="wrap">
   <section class="brand">
-    <div class="logo"><img src="logo.png" alt="" onerror="this.outerHTML='<span class=mono>JT</span>'"></div>
+    <div class="logo">
+      <svg class="lg" viewBox="0 0 64 64" aria-label="CESES / SPL">
+        <defs>
+          <linearGradient id="lgBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b4c92"/><stop offset="1" stop-color="#071b3c"/></linearGradient>
+          <linearGradient id="lgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eaaff"/><stop offset="1" stop-color="#1f6fe8"/></linearGradient>
+        </defs>
+        <rect width="64" height="64" rx="16" fill="url(#lgBg)"/>
+        <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="#fff" stroke-opacity=".18"/>
+        <path class="lg-c" d="M45 18.5A18 18 0 1 0 45 45.5" fill="none" stroke="url(#lgC)" stroke-width="6" stroke-linecap="round"/>
+        <path class="lg-s" d="M40 24C26 24 26 32 32.5 32S39 40 25 40" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+        <circle class="lg-n" cx="40" cy="24" r="3.6" fill="#f5b301"/>
+        <circle class="lg-n" cx="25" cy="40" r="3.6" fill="#f5b301"/>
+      </svg>
+      <div class="lg-txt"><b>CESES <i>/</i> SPL</b><span>Relaciones Laborales</span></div>
+    </div>
     <div class="tag"><i class="bi bi-stars"></i> Unifrutti Perú · Relaciones Laborales</div>
     <h1>Programación de<br><span>Ceses / SPL</span></h1>
     <p class="lead">Plataforma para gestionar finiquitos, suspensiones y sin efecto del personal obrero de VERFRUT y RAPEL, con validación automática de reglas laborales y resumen listo para enviar.</p>
@@ -106,7 +132,7 @@
       <button type="button" class="eye" id="eye" title="Mostrar / ocultar"><i class="bi bi-eye"></i></button></div>
     <button class="btn" id="btn"><i class="bi bi-box-arrow-in-right"></i> Ingresar al sistema</button>
     <div id="err" class="err"></div>
-    <div class="foot"><span class="lock"><i class="bi bi-shield-lock-fill"></i> Acceso protegido</span><span>Ceses / SPL Web · v1.1</span></div>
+    <div class="foot"><span class="lock"><i class="bi bi-shield-lock-fill"></i> Acceso protegido</span><span>CESES / SPL Web · v2.0</span></div>
   </form>
 </div>
 <div class="copy">© <span id="anio"></span> UNIFRUTTI PERÚ · RELACIONES LABORALES · DESARROLLADO POR JOEL TIMOTEO</div>

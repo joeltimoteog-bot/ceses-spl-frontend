@@ -3,23 +3,203 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Programación de Ceses / SPL · Unifrutti Perú</title>
+<title>CESES / SPL · Unifrutti Perú</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <style>
+  /* ============================================================
+     CESES / SPL · Design system
+     ============================================================ */
   :root{
-    --navy:#0b2e5b; --navy-2:#123f7a; --navy-3:#1b5aa6; --gold:#f5b301; --gold-2:#ffd45c;
-    --bg:#eef2f8; --card:#fff; --ink:#1c2b3a; --muted:#6b7a90; --line:#e3e8f0;
-    --ok:#1f9d55; --warn:#e69a00; --danger:#d63a3a; --info:#1565c0; --purple:#6a1b9a;
-    --sb:250px; --radius:14px; --shadow:0 6px 22px rgba(11,46,91,.08);
+    --navy:#0b2e5b; --navy-2:#123f7a; --navy-3:#1b5aa6; --navy-dark:#071b3c; --navy-ink:#0a2447;
+    --blue:#1f6fe8; --blue-2:#5eaaff; --gold:#f5b301; --gold-2:#ffd45c;
+    --bg:#f4f6fa; --card:#ffffff; --ink:#1c2b3a; --muted:#6b7a90; --line:#e6eaf1; --line-2:#d9dfe9;
+    --ok:#1f9d55; --ok-bg:#e8f7ee; --warn:#e69a00; --warn-bg:#fff5e0; --danger:#d63a3a; --danger-bg:#fdecec;
+    --info:#1565c0; --info-bg:#e8f0fc; --purple:#6a1b9a; --purple-bg:#f3e8f9;
+    --sb:264px; --sb-mini:78px; --top:64px;
+    --radius:14px; --radius-sm:10px; --shadow:0 1px 2px rgba(11,46,91,.04),0 6px 20px rgba(11,46,91,.06);
+    --shadow-hover:0 10px 28px rgba(11,46,91,.12);
+    --ease:cubic-bezier(.2,.7,.2,1);
   }
   *{box-sizing:border-box}
-  body{margin:0;font-family:Tahoma,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);font-size:10pt}
-  .form-control,.form-select,.btn,.badge,table,.small,small{font-family:Tahoma,"Segoe UI",sans-serif}
-  .tbl td,.tbl thead th,.form-control,.form-select{font-size:10pt}
-  /* tabla dinámica */
-  .piv{border-collapse:collapse;font-family:Tahoma;font-size:10pt;width:100%}
+  html{scroll-behavior:smooth}
+  body{margin:0;font-family:Inter,"Segoe UI",Tahoma,sans-serif;background:var(--bg);color:var(--ink);font-size:13.5px;line-height:1.45;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+  .form-control,.form-select,.btn,.badge,table,.small,small,.modal{font-family:inherit}
+  a{color:var(--navy-3)}
+  ::selection{background:rgba(31,111,232,.18)}
+  ::-webkit-scrollbar{height:8px;width:8px}::-webkit-scrollbar-thumb{background:#c9d2df;border-radius:8px}::-webkit-scrollbar-thumb:hover{background:#aeb9c9}
+
+  /* ---------- logo ---------- */
+  .lg{display:block;flex-shrink:0}
+
+  /* ---------- sidebar ---------- */
+  .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sb);background:var(--navy-dark);color:#fff;display:flex;flex-direction:column;z-index:110;border-right:1px solid rgba(255,255,255,.06);transition:width .25s var(--ease),transform .28s var(--ease)}
+  .brand{display:flex;align-items:center;gap:12px;padding:16px 16px 14px;min-height:var(--top);border-bottom:1px solid rgba(255,255,255,.07);position:relative}
+  .brand .lg{width:42px;height:42px;filter:drop-shadow(0 6px 14px rgba(0,0,0,.35))}
+  .brand-txt{min-width:0;overflow:hidden;white-space:nowrap}
+  .brand h1{font-size:15.5px;font-weight:800;margin:0;line-height:1.1;letter-spacing:-.2px}
+  .brand h1 em{font-style:normal;color:var(--gold)}
+  .brand small{display:block;color:#8fa3c0;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;margin-top:3px;font-weight:600}
+  .sb-toggle{position:absolute;right:-13px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:1px solid var(--line-2);background:#fff;color:var(--navy);display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(11,46,91,.15);transition:all .2s;font-size:12px;padding:0}
+  .sb-toggle:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .menu{padding:12px 12px;flex:1;display:flex;flex-direction:column;gap:2px;overflow-y:auto;overflow-x:hidden}
+  .menu-sec{font-size:10px;font-weight:700;letter-spacing:1.6px;text-transform:uppercase;color:#6f86a8;padding:14px 12px 6px;white-space:nowrap}
+  .menu-sec:first-child{padding-top:4px}
+  .menu a{display:flex;align-items:center;gap:12px;padding:10px 12px;border-radius:10px;color:#b9c8dd;text-decoration:none;font-weight:500;font-size:13.5px;transition:background .18s,color .18s,transform .18s;position:relative;white-space:nowrap}
+  .menu a i{font-size:17px;width:22px;text-align:center;flex-shrink:0;opacity:.9;transition:transform .2s}
+  .menu a:hover{background:rgba(255,255,255,.07);color:#fff}
+  .menu a:hover i{transform:scale(1.08)}
+  .menu a:active{transform:scale(.98)}
+  .menu a.active{background:linear-gradient(90deg,rgba(31,111,232,.32),rgba(31,111,232,.08));color:#fff;font-weight:600}
+  .menu a.active::before{content:"";position:absolute;left:-12px;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0;background:var(--gold)}
+  .menu a.active i{color:var(--blue-2)}
+  .sb-foot{padding:12px 12px 14px;border-top:1px solid rgba(255,255,255,.07)}
+  .sb-foot .user{display:flex;align-items:center;gap:10px;padding:8px 6px;border-radius:10px;margin-bottom:8px}
+  .sb-foot .avatar{width:36px;height:36px;border-radius:10px;background:linear-gradient(135deg,var(--gold),#e39f00);color:var(--navy-dark);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:15px}
+  .sb-foot .user-txt{min-width:0;overflow:hidden;white-space:nowrap}
+  .sb-foot .user b{color:#fff;display:block;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis}
+  .sb-foot .user span{color:#8fa3c0;font-size:11px;text-transform:capitalize}
+  .btn-salir{width:100%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);color:#d6e0ee;border-radius:10px;padding:8px;font-size:12.5px;font-weight:600;display:flex;align-items:center;justify-content:center;gap:8px;transition:all .18s;white-space:nowrap;overflow:hidden}
+  .btn-salir:hover{background:rgba(214,58,58,.18);border-color:rgba(214,58,58,.4);color:#fff}
+  .backdrop{position:fixed;inset:0;background:rgba(7,27,60,.5);backdrop-filter:blur(2px);z-index:105;opacity:0;pointer-events:none;transition:opacity .25s}
+  .backdrop.show{opacity:1;pointer-events:auto}
+
+  /* sidebar contraída (escritorio) */
+  @media (min-width:993px){
+    .sb-toggle{display:flex}
+    body.sb-mini .sidebar{width:var(--sb-mini)}
+    body.sb-mini .main{margin-left:var(--sb-mini)}
+    body.sb-mini .brand{padding:16px 0 14px;justify-content:center}
+    body.sb-mini .brand-txt,body.sb-mini .menu-sec,body.sb-mini .menu a span,body.sb-mini .user-txt,body.sb-mini .btn-salir span{display:none}
+    body.sb-mini .menu a{justify-content:center;padding:11px 0}
+    body.sb-mini .menu a.active::before{left:0}
+    body.sb-mini .menu{gap:6px}
+    body.sb-mini .sb-toggle i{transform:rotate(180deg)}
+    body.sb-mini .sb-foot .user{justify-content:center;padding:6px 0}
+    body.sb-mini .btn-salir{padding:9px 0}
+  }
+
+  /* ---------- topbar + content ---------- */
+  .main{margin-left:var(--sb);min-height:100vh;display:flex;flex-direction:column;transition:margin .25s var(--ease)}
+  .topbar{height:var(--top);display:flex;align-items:center;justify-content:space-between;gap:12px;padding:0 28px;background:rgba(255,255,255,.85);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:100}
+  .tb-left{display:flex;align-items:center;gap:12px;min-width:0}
+  .tb-title{min-width:0}
+  .topbar h2{font-size:17px;font-weight:700;margin:0;color:var(--navy);line-height:1.15;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .topbar .sub{color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .tb-right{display:flex;align-items:center;gap:8px;flex-shrink:0}
+  .tb-right .fecha{font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px;padding:6px 10px;border-radius:8px;background:#f4f6fa;text-transform:capitalize}
+  .pill{background:var(--navy);color:#fff;padding:5px 11px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:.4px}
+  .pill.alt{background:#e8f0fc;color:var(--navy);display:none}
+  .hamb{display:none;border:1px solid var(--line-2);background:#fff;color:var(--navy);border-radius:10px;width:40px;height:40px;align-items:center;justify-content:center;font-size:20px;flex-shrink:0;transition:all .18s}
+  .hamb:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .tb-logo{display:none;width:32px;height:32px}
+  .content{padding:24px 28px 48px;animation:fade .35s var(--ease);flex:1}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .pantalla{display:none}.pantalla.activa{display:block}
+
+  /* ---------- cards ---------- */
+  .card{border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);background:var(--card);transition:box-shadow .2s}
+  .card.p-3{padding:18px 20px!important}
+  .card h6{font-weight:700;color:var(--navy);display:flex;align-items:center;gap:9px;margin:0 0 12px;font-size:14px}
+  .card h6 i{color:var(--navy-3);background:#e8f0fc;border-radius:8px;width:30px;height:30px;display:inline-flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+  .card h6 .hint{font-weight:400;color:var(--muted);font-size:12px;margin-left:2px}
+  .card-h{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;margin-bottom:12px}
+  .card-h h6{margin:0}
+  .grid-2{display:grid;grid-template-columns:5fr 7fr;gap:18px;align-items:start}
+  .grid-2.eq{grid-template-columns:1fr 1fr}
+  .grid-2.wide{grid-template-columns:7fr 5fr}
+  .grid-side{display:grid;grid-template-columns:380px 1fr;gap:18px;align-items:start}
+  .mt-18{margin-top:18px}
+
+  /* ---------- KPI ---------- */
+  .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+  .kpi{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:16px 18px;display:flex;align-items:center;gap:14px;box-shadow:var(--shadow);transition:transform .2s var(--ease),box-shadow .2s;position:relative;overflow:hidden}
+  .kpi:hover{transform:translateY(-2px);box-shadow:var(--shadow-hover)}
+  .kpi .ic{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0}
+  .kpi .ic.b{background:#e8f0fc;color:var(--blue)}.kpi .ic.n{background:#e6ecf5;color:var(--navy)}.kpi .ic.g{background:#fff5d6;color:#c98d00}.kpi .ic.k{background:var(--ok-bg);color:var(--ok)}
+  .kpi .lbl{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.5px}
+  .kpi .val{font-size:26px;font-weight:800;line-height:1.1;margin-top:3px;color:var(--navy);letter-spacing:-.5px}
+  .kpi-mini{border-radius:12px;padding:14px 12px;text-align:center;background:#fff;box-shadow:var(--shadow);border:1px solid var(--line);position:relative;overflow:hidden;transition:transform .2s}
+  .kpi-mini::before{content:"";position:absolute;left:0;top:0;right:0;height:3px;background:var(--navy)}
+  .kpi-mini:hover{transform:translateY(-2px)}
+  .kpi-mini .n{font-size:24px;font-weight:800;color:var(--navy);letter-spacing:-.5px}.kpi-mini .t{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;font-weight:600}
+  .kpi-mini.rojo::before{background:var(--danger)}.kpi-mini.rojo .n{color:var(--danger)}
+  .kpi-mini.amb::before{background:var(--warn)}.kpi-mini.amb .n{color:var(--warn)}
+  .kpi-mini.gris::before{background:#8a97a8}.kpi-mini.gris .n{color:#8a97a8}
+
+  /* ---------- estado de bases ---------- */
+  .emp-tag{display:inline-flex;align-items:center;gap:6px;font-weight:700;font-size:12px;color:var(--navy);background:#e8f0fc;padding:4px 10px;border-radius:8px}
+  .emp-tag::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--blue)}
+  .st{display:inline-flex;align-items:center;gap:6px;font-size:11.5px;font-weight:600;padding:4px 9px;border-radius:999px}
+  .st.ok{background:var(--ok-bg);color:var(--ok)}.st.bad{background:var(--danger-bg);color:var(--danger)}.st.warn{background:var(--warn-bg);color:#a86e00}.st.info{background:var(--info-bg);color:var(--info)}.st.gris{background:#eef1f5;color:#5b6b82}.st.purple{background:var(--purple-bg);color:var(--purple)}
+  .msg{font-size:12.5px;margin-top:10px;min-height:0}
+  .msg:empty{display:none}
+
+  /* ---------- accesos rápidos ---------- */
+  .quick{display:grid;grid-template-columns:repeat(4,1fr);gap:14px}
+  .qa{display:flex;align-items:center;gap:12px;padding:14px 16px;border:1px solid var(--line);border-radius:12px;background:#fff;color:var(--ink);text-decoration:none;transition:all .2s var(--ease);cursor:pointer}
+  .qa:hover{border-color:var(--navy-3);box-shadow:var(--shadow-hover);transform:translateY(-2px);color:var(--ink)}
+  .qa .ic{width:40px;height:40px;border-radius:10px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+  .qa b{display:block;font-size:13.5px;color:var(--navy)}.qa span{font-size:11.5px;color:var(--muted)}
+  .qa .go{margin-left:auto;color:#aab6c6;transition:transform .2s}
+  .qa:hover .go{transform:translateX(3px);color:var(--navy-3)}
+
+  /* ---------- buscar trabajador ---------- */
+  .hero-search{background:linear-gradient(135deg,var(--navy) 0%,var(--navy-2) 60%,#1a4f96 100%);color:#fff;border:0;padding:22px 24px;display:flex;flex-direction:row;align-items:center;gap:20px;position:relative;overflow:hidden}
+  .hero-search::after{content:"";position:absolute;right:-60px;top:-80px;width:260px;height:260px;border-radius:50%;background:rgba(255,255,255,.06)}
+  .hero-search .hs-ico{width:60px;height:60px;border-radius:16px;background:rgba(255,255,255,.12);display:flex;align-items:center;justify-content:center;font-size:28px;flex-shrink:0;color:var(--gold)}
+  .hero-search .hs-body{flex:1;min-width:0;position:relative}
+  .hero-search label{font-size:11px;font-weight:700;letter-spacing:1.2px;text-transform:uppercase;color:#bcd0ea;margin-bottom:8px;display:block}
+  .hs-row{display:flex;gap:10px;max-width:520px}
+  .hs-row .dni-input{flex:1;font-size:20px;letter-spacing:3px;font-weight:600;background:#fff;border:0;border-radius:11px;padding:10px 16px;color:var(--navy);min-width:0;height:48px}
+  .hs-row .dni-input:focus{box-shadow:0 0 0 4px rgba(245,179,1,.35)}
+  .hs-row .btn{height:48px;padding:0 20px;border-radius:11px;font-weight:700;display:inline-flex;align-items:center;gap:8px;background:var(--gold);color:var(--navy-dark);border:0;flex-shrink:0}
+  .hs-row .btn:hover{background:var(--gold-2);color:var(--navy-dark)}
+  .hs-row .btn .spin{display:none;width:16px;height:16px;border:2px solid rgba(7,27,60,.3);border-top-color:var(--navy-dark);border-radius:50%;animation:rot .7s linear infinite}
+  .hs-row .btn.loading .spin{display:inline-block}.hs-row .btn.loading .bi{display:none}
+  @keyframes rot{to{transform:rotate(360deg)}}
+  .err-msg{color:#ffb4b4;font-size:12.5px;margin-top:8px;min-height:18px;display:flex;align-items:center;gap:6px}
+  .err-msg:empty{display:none}
+  .ficha{margin-top:18px}
+  .ficha .f-head{display:flex;align-items:center;gap:16px;flex-wrap:wrap;padding-bottom:14px;border-bottom:1px solid var(--line);margin-bottom:14px}
+  .ficha .f-av{width:54px;height:54px;border-radius:14px;background:var(--navy);color:#fff;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;flex-shrink:0}
+  .ficha-nombre{font-size:18px;font-weight:800;color:var(--navy);line-height:1.15}
+  .ficha .f-tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+  .f-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .f-item{background:#f8fafd;border:1px solid var(--line);border-radius:10px;padding:10px 12px;min-width:0}
+  .f-item .k{font-size:10.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.6px;display:flex;align-items:center;gap:5px}
+  .f-item .k i{color:var(--navy-3)}
+  .f-item .v{font-size:13.5px;font-weight:600;color:var(--ink);margin-top:3px;word-break:break-word}
+  .f-item.span2{grid-column:span 2}
+  .f-item.danger .v{color:var(--danger)}.f-item.info .v{color:var(--info)}
+  .hist{max-height:62vh;overflow:auto;border:1px solid var(--line);border-radius:10px}
+
+  /* ---------- tablas ---------- */
+  .table-wrap{overflow-x:auto;border:1px solid var(--line);border-radius:10px;-webkit-overflow-scrolling:touch}
+  .table-wrap .tbl{margin:0}
+  .tbl{margin:0;font-size:13px}
+  .tbl thead th{background:#f6f8fb;color:#4c5b70;font-size:11px;text-transform:uppercase;letter-spacing:.5px;font-weight:700;border-bottom:1px solid var(--line-2);white-space:nowrap;padding:.6rem .7rem;position:sticky;top:0;z-index:1}
+  .tbl td{padding:.55rem .7rem;white-space:nowrap;vertical-align:middle;border-color:var(--line)}
+  .tbl.compact th,.tbl.compact td{padding:.5rem .55rem}
+  .tbl tbody tr{transition:background .15s}
+  .tbl tbody tr:hover{background:#f3f7fd}
+  .tbl tbody tr:last-child td{border-bottom:0}
+  .badge-est{font-size:11px;font-weight:700;padding:.35em .7em;border-radius:6px;letter-spacing:.3px}
+  .al-INDETERMINADO,.al-SIN_EFECTO{color:var(--danger);font-weight:600}
+  .al-PROXIMO{color:var(--warn);font-weight:600}
+  .al-EMPLEADO_EXCLUIDO{color:var(--purple);font-weight:600}
+  .al-SUSP_30,.al-SUSP_ACUM{color:var(--info);font-weight:600}
+  .btn-ico{width:30px;height:30px;border-radius:8px;border:1px solid var(--line-2);background:#fff;color:var(--navy);display:inline-flex;align-items:center;justify-content:center;padding:0;transition:all .18s;font-size:13px}
+  .btn-ico:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
+  .btn-ico.danger:hover{background:var(--danger);border-color:var(--danger)}
+  .empty{color:var(--muted);text-align:center;padding:28px 12px;font-size:13px;white-space:normal}
+  .empty i{display:block;font-size:26px;color:#c3ccd9;margin-bottom:6px}
+
+  /* tabla dinámica (formato Excel: Tahoma 10) */
+  .piv{border-collapse:collapse;font-family:Tahoma,"Segoe UI",sans-serif;font-size:10pt;width:100%}
   .piv th,.piv td{border:1px solid #d9dfe8;padding:4px 8px;white-space:nowrap}
   .piv thead th{background:#dce6f1;color:var(--navy);font-weight:700;text-align:center}
   .piv thead th.grp{background:var(--navy);color:#fff}
@@ -31,259 +211,315 @@
   .piv tr.gral td{background:var(--navy);color:#fff;font-weight:700}
   .piv td.ok{color:var(--ok);font-weight:700}.piv td.falta{color:var(--danger);font-weight:700}
   .piv input{font-family:Tahoma;font-size:10pt;border:1px solid #cfd7e3;border-radius:4px;padding:2px 6px;min-width:120px}
-  /* ---------- sidebar ---------- */
-  .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sb);background:linear-gradient(180deg,var(--navy) 0%,#082246 100%);color:#fff;display:flex;flex-direction:column;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,.18);transition:transform .25s}
-  .brand{display:flex;align-items:center;gap:12px;padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
-  .brand .logo{width:46px;height:46px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.25);flex-shrink:0}
-  .brand .logo img{max-width:100%;max-height:100%;object-fit:contain}
-  .brand .logo .mono{font-weight:800;color:var(--navy);font-size:18px;letter-spacing:-.5px}
-  .brand h1{font-size:15px;font-weight:700;margin:0;line-height:1.15;letter-spacing:.3px}
-  .brand small{color:#9fb3cc;font-size:11px;letter-spacing:.8px;text-transform:uppercase}
-  .menu{padding:14px 12px;flex:1;display:flex;flex-direction:column;gap:4px}
-  .menu a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:#c9d6e6;text-decoration:none;font-weight:500;transition:all .18s;position:relative}
-  .menu a i{font-size:17px;width:22px;text-align:center;opacity:.9}
-  .menu a:hover{background:rgba(255,255,255,.08);color:#fff;transform:translateX(2px)}
-  .menu a.active{background:linear-gradient(90deg,rgba(245,179,1,.22),rgba(245,179,1,.06));color:#fff}
-  .menu a.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:4px;background:var(--gold)}
-  .sb-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#9fb3cc}
-  .sb-foot .user{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-  .sb-foot .avatar{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--navy);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
-  .sb-foot .user b{color:#fff;display:block;font-size:13px}
-  .btn-salir{width:100%;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:8px;padding:6px;font-size:12px}
-  .btn-salir:hover{background:rgba(255,255,255,.1)}
-  /* ---------- topbar + content ---------- */
-  .main{margin-left:var(--sb);min-height:100vh;display:flex;flex-direction:column}
-  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;background:rgba(255,255,255,.7);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
-  .topbar h2{font-size:20px;font-weight:700;margin:0;color:var(--navy)}
-  .topbar .sub{color:var(--muted);font-size:12.5px}
-  .topbar .fecha{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
-  .pill{background:linear-gradient(90deg,var(--navy-2),var(--navy-3));color:#fff;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600}
-  .content{padding:22px 28px 40px;animation:fade .35s ease}
-  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
-  .hamb{display:none;border:0;background:var(--navy);color:#fff;border-radius:8px;width:38px;height:38px}
-  /* ---------- cards ---------- */
-  .card{border:0;border-radius:var(--radius);box-shadow:var(--shadow);background:var(--card)}
-  .card h6{font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px;margin-bottom:12px}
-  .card h6 i{color:var(--gold);background:rgba(245,179,1,.14);border-radius:8px;padding:6px;font-size:14px}
-  .kpi-card{position:relative;overflow:hidden;padding:18px 20px;color:#fff;border-radius:var(--radius);box-shadow:var(--shadow);min-height:104px;transition:transform .2s}
-  .kpi-card:hover{transform:translateY(-3px)}
-  .kpi-card .lbl{font-size:12px;opacity:.85;text-transform:uppercase;letter-spacing:.6px}
-  .kpi-card .val{font-size:30px;font-weight:800;line-height:1.1;margin-top:6px}
-  .kpi-card i.bg{position:absolute;right:-8px;bottom:-14px;font-size:84px;opacity:.14}
-  .g1{background:linear-gradient(135deg,#0b2e5b,#1b5aa6)}.g2{background:linear-gradient(135deg,#123f7a,#2f80ed)}
-  .g3{background:linear-gradient(135deg,#b8860b,#f5b301)}.g4{background:linear-gradient(135deg,#1f9d55,#3ccf7a)}
-  .kpi-mini{border-radius:12px;padding:12px 14px;text-align:center;background:#fff;box-shadow:var(--shadow);border-top:4px solid var(--navy)}
-  .kpi-mini .n{font-size:26px;font-weight:800;color:var(--navy)}.kpi-mini .t{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
-  .kpi-mini.rojo{border-color:var(--danger)}.kpi-mini.rojo .n{color:var(--danger)}
-  .kpi-mini.amb{border-color:var(--warn)}.kpi-mini.amb .n{color:var(--warn)}
-  .kpi-mini.gris{border-color:#8a97a8}.kpi-mini.gris .n{color:#8a97a8}
-  /* ---------- tables ---------- */
-  .tbl{margin:0}.tbl thead th{background:#f4f7fb;color:var(--navy);text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--line);white-space:nowrap}
-  .tbl td{padding:.45rem .6rem;white-space:nowrap;vertical-align:middle;border-color:var(--line)}
-  .tbl tbody tr:hover{background:#f8fafd}
-  .badge-est{font-size:11px;font-weight:600;padding:.35em .7em;border-radius:6px}
-  .al-INDETERMINADO,.al-SIN_EFECTO{color:var(--danger);font-weight:600}
-  .al-PROXIMO{color:var(--warn);font-weight:600}
-  .al-EMPLEADO_EXCLUIDO{color:var(--purple);font-weight:600}
-  .al-SUSP_30,.al-SUSP_ACUM{color:var(--info);font-weight:600}
-  .pantalla{display:none}.pantalla.activa{display:block}
-  .hist{max-height:300px;overflow:auto}
-  .previa{border:1px solid var(--line);background:#fff;padding:16px;border-radius:10px;max-height:60vh;overflow:auto}
+  .piv input:focus{outline:0;border-color:var(--navy-3);box-shadow:0 0 0 2px rgba(27,90,166,.15)}
   input.firma{min-width:110px}
-  .form-control,.form-select{border-radius:9px;border-color:#d7deea}
-  .form-control:focus,.form-select:focus{border-color:var(--navy-3);box-shadow:0 0 0 3px rgba(27,90,166,.15)}
-  .form-label.small{font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
-  .btn{border-radius:9px;font-weight:600}
-  .btn-primary{background:linear-gradient(90deg,var(--navy-2),var(--navy-3));border:0}
-  .btn-primary:hover{background:linear-gradient(90deg,var(--navy),var(--navy-2))}
-  .btn-gold{background:linear-gradient(90deg,#e0a300,var(--gold));border:0;color:var(--navy)}
-  .btn-gold:hover{filter:brightness(1.05);color:var(--navy)}
-  .btn-success{background:linear-gradient(90deg,#178a49,var(--ok));border:0}
-  .step{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;font-weight:700;margin-right:6px}
-  .alert{border:0;border-radius:12px}
-  .ficha-nombre{font-size:18px;font-weight:800;color:var(--navy)}
   .rec.ok{color:var(--ok);font-weight:700}.rec.falta{color:var(--danger);font-weight:700}
-  .dni-input{font-size:22px;letter-spacing:2px;font-weight:600}
-  .empty{color:var(--muted);text-align:center;padding:26px;font-size:13px;white-space:normal}
+
+  /* ---------- formularios y botones ---------- */
+  .form-control,.form-select{border-radius:var(--radius-sm);border-color:var(--line-2);font-size:13.5px;padding:.5rem .75rem;transition:border-color .15s,box-shadow .15s}
+  .form-control:hover,.form-select:hover{border-color:#b9c4d4}
+  .form-control:focus,.form-select:focus{border-color:var(--blue);box-shadow:0 0 0 3px rgba(31,111,232,.15)}
+  .form-control:disabled{background:#f1f3f7}
+  .form-label.small{font-weight:600;color:#4c5b70;font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:4px}
+  textarea.form-control{font-family:ui-monospace,Consolas,monospace;font-size:13px}
+  .btn{border-radius:var(--radius-sm);font-weight:600;font-size:13.5px;padding:.5rem .95rem;transition:all .18s var(--ease);display:inline-flex;align-items:center;gap:7px;justify-content:center}
+  .btn:active{transform:scale(.98)}
+  .btn:disabled{opacity:.55;cursor:not-allowed;transform:none}
+  .btn:focus-visible{box-shadow:0 0 0 3px rgba(31,111,232,.3)}
+  .btn-sm{padding:.35rem .7rem;font-size:12.5px}
+  .btn-primary{background:var(--navy);border-color:var(--navy)}
+  .btn-primary:hover{background:var(--navy-2);border-color:var(--navy-2);box-shadow:0 6px 16px rgba(11,46,91,.25)}
+  .btn-outline-primary{color:var(--navy);border-color:#c5d3e6}
+  .btn-outline-primary:hover{background:var(--navy);border-color:var(--navy)}
+  .btn-gold{background:var(--gold);border-color:var(--gold);color:var(--navy-dark)}
+  .btn-gold:hover{background:var(--gold-2);border-color:var(--gold-2);color:var(--navy-dark);box-shadow:0 6px 16px rgba(245,179,1,.3)}
+  .btn-success{background:var(--ok);border-color:var(--ok)}
+  .btn-success:hover{background:#178a49;border-color:#178a49;box-shadow:0 6px 16px rgba(31,157,85,.25)}
+  .btn-outline-success{color:var(--ok);border-color:#bfe3cd}.btn-outline-success:hover{background:var(--ok);border-color:var(--ok)}
+  .btn-light{background:#f1f4f9;border-color:#f1f4f9;color:var(--navy)}.btn-light:hover{background:#e3e9f2;border-color:#e3e9f2;color:var(--navy)}
+  .alert{border:0;border-radius:12px;font-size:13px}
+  .alert-danger{background:var(--danger-bg);color:#8c1d1d}.alert-warning{background:var(--warn-bg);color:#7a5200}.alert-light{background:#f6f8fb;color:var(--ink)}
+
+  /* ---------- registro masivo: stepper ---------- */
+  .stepper{display:flex;gap:10px;margin-bottom:18px}
+  .stp{flex:1;display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--line);border-radius:12px;padding:12px 14px;box-shadow:var(--shadow)}
+  .stp .num{width:32px;height:32px;border-radius:50%;background:#e8f0fc;color:var(--navy);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px}
+  .stp.on .num{background:var(--navy);color:#fff}
+  .stp b{display:block;font-size:13px;color:var(--navy)}.stp span{font-size:11.5px;color:var(--muted)}
+  .step{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;font-weight:700;margin-right:6px;flex-shrink:0}
+  .stat-row{display:flex;gap:10px;flex-wrap:wrap}
+  .stat-chip{display:inline-flex;align-items:center;gap:8px;padding:6px 12px;border-radius:999px;background:#f4f6fa;border:1px solid var(--line);font-size:12.5px;color:#4c5b70}
+  .stat-chip b{font-size:14px;color:var(--navy)}
+  .stat-chip.ok b{color:var(--ok)}.stat-chip.bad b{color:var(--danger)}.stat-chip.gris b{color:#8a97a8}
+
+  /* ---------- filtros programaciones ---------- */
+  .filter-bar{display:flex;gap:12px;align-items:flex-end;flex-wrap:wrap}
+  .filter-bar .f-main{flex:1;min-width:260px}
+  .filter-bar .f-actions{display:flex;gap:8px;flex-wrap:wrap}
+  .previa{border:1px solid var(--line);background:#fff;padding:16px;border-radius:10px;max-height:60vh;overflow:auto}
+  .modal-content{border-radius:16px;border:0;box-shadow:0 30px 80px rgba(7,27,60,.35)}
+  .modal-header{border-bottom:1px solid var(--line)}.modal-footer{border-top:1px solid var(--line);flex-wrap:wrap}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1280px){
+    .f-grid{grid-template-columns:repeat(3,1fr)}
+    .grid-side{grid-template-columns:340px 1fr}
+  }
+  @media (max-width:1100px){
+    .kpi-grid,.quick{grid-template-columns:repeat(2,1fr)}
+    .grid-2,.grid-2.eq,.grid-2.wide,.grid-side{grid-template-columns:1fr}
+    .tb-right .fecha{display:none}
+  }
   @media (max-width:992px){
-    .sidebar{transform:translateX(-100%)}.sidebar.open{transform:none}
-    .main{margin-left:0}.hamb{display:inline-flex;align-items:center;justify-content:center}
-    .content{padding:14px}.topbar{padding:12px 14px}.kpi-card .val{font-size:24px}
+    .sidebar{transform:translateX(-100%);width:var(--sb);box-shadow:8px 0 30px rgba(0,0,0,.25)}
+    .sidebar.open{transform:none}
+    .main{margin-left:0}
+    .hamb{display:inline-flex}
+    .tb-logo{display:block}
+    .topbar{padding:0 14px}
+    .content{padding:16px 14px 40px}
+    .f-grid{grid-template-columns:repeat(2,1fr)}
+    .stepper{flex-direction:row;overflow-x:auto}
+    .stp{min-width:180px}
+  }
+  @media (max-width:600px){
+    .topbar .sub{display:none}
+    .pill{display:none}.pill.alt{display:inline-block}
+    .kpi-grid{grid-template-columns:1fr 1fr;gap:10px}
+    .kpi{padding:12px 14px;gap:10px}.kpi .val{font-size:21px}.kpi .ic{width:40px;height:40px;font-size:17px}
+    .quick{grid-template-columns:1fr}
+    .hero-search{flex-direction:column;align-items:stretch;padding:18px 16px}
+    .hero-search .hs-ico{display:none}
+    .hs-row{flex-direction:column}.hs-row .btn{width:100%}
+    .f-grid{grid-template-columns:1fr}.f-item.span2{grid-column:span 1}
+    .stepper{flex-direction:column;overflow:visible}.stp{min-width:0}
+    .filter-bar .f-actions{width:100%}.filter-bar .f-actions .btn{flex:1}
+    .card.p-3{padding:14px 14px!important}
+    .modal-footer .btn{flex:1}
   }
 </style>
 </head>
 <body>
 
+<!-- ===== Isotipo CESES / SPL (símbolo reutilizable) ===== -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="lg-mark" viewBox="0 0 64 64">
+    <defs>
+      <linearGradient id="lgBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#153f7c"/><stop offset="1" stop-color="#071b3c"/></linearGradient>
+      <linearGradient id="lgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eaaff"/><stop offset="1" stop-color="#1f6fe8"/></linearGradient>
+    </defs>
+    <rect width="64" height="64" rx="16" fill="url(#lgBg)"/>
+    <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="#fff" stroke-opacity=".12"/>
+    <path d="M45 18.5A18 18 0 1 0 45 45.5" fill="none" stroke="url(#lgC)" stroke-width="6" stroke-linecap="round"/>
+    <path d="M40 24C26 24 26 32 32.5 32S39 40 25 40" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
+    <circle cx="40" cy="24" r="3.6" fill="#f5b301"/>
+    <circle cx="25" cy="40" r="3.6" fill="#f5b301"/>
+  </symbol>
+</svg>
+
+<div class="backdrop" id="backdrop" onclick="cerrarMenu()"></div>
+
 <aside class="sidebar" id="sidebar">
   <div class="brand">
-    <div class="logo"><img src="logo.png" alt="" onerror="this.outerHTML='<span class=mono>JT</span>'"></div>
-    <div><h1>CESES / SPL</h1><small>Unifrutti Perú · RR.LL.</small></div>
+    <svg class="lg"><use href="#lg-mark"/></svg>
+    <div class="brand-txt"><h1>CESES <em>/</em> SPL</h1><small>Relaciones Laborales</small></div>
+    <button class="sb-toggle" type="button" onclick="toggleSidebar()" title="Contraer / expandir"><i class="bi bi-chevron-left"></i></button>
   </div>
   <nav class="menu">
-    <a href="#inicio" class="active" data-p="inicio"><i class="bi bi-grid-1x2-fill"></i> Inicio</a>
-    <a href="#dni" data-p="dni"><i class="bi bi-person-badge-fill"></i> Buscar DNI</a>
-    <a href="#registro" data-p="registro"><i class="bi bi-journal-plus"></i> Registro masivo</a>
-    <a href="#resumen" data-p="resumen"><i class="bi bi-calendar2-week-fill"></i> Resumen por Fecha Doc.</a>
-    <a href="#responsables" data-p="responsables"><i class="bi bi-people-fill"></i> Responsables</a>
+    <div class="menu-sec">Principal</div>
+    <a href="#inicio" class="active" data-p="inicio" title="Inicio"><i class="bi bi-grid-1x2-fill"></i><span>Inicio</span></a>
+    <div class="menu-sec">Operaciones</div>
+    <a href="#dni" data-p="dni" title="Buscar trabajador"><i class="bi bi-person-vcard-fill"></i><span>Buscar trabajador</span></a>
+    <a href="#registro" data-p="registro" title="Registro masivo"><i class="bi bi-journal-plus"></i><span>Registro masivo</span></a>
+    <div class="menu-sec">Consultas</div>
+    <a href="#resumen" data-p="resumen" title="Programaciones"><i class="bi bi-calendar2-week-fill"></i><span>Programaciones</span></a>
+    <div class="menu-sec">Configuración</div>
+    <a href="#responsables" data-p="responsables" title="Responsables"><i class="bi bi-people-fill"></i><span>Responsables</span></a>
   </nav>
   <div class="sb-foot">
-    <div class="user"><div class="avatar" id="avatar">J</div><div><b id="quien">—</b><span id="rol"></span></div></div>
-    <button class="btn-salir" onclick="salir()"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+    <div class="user"><div class="avatar" id="avatar">J</div><div class="user-txt"><b id="quien">—</b><span id="rol"></span></div></div>
+    <button class="btn-salir" onclick="salir()" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i><span>Cerrar sesión</span></button>
   </div>
 </aside>
 
 <div class="main">
   <header class="topbar">
-    <div class="d-flex align-items-center gap-3">
-      <button class="hamb" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="bi bi-list fs-5"></i></button>
-      <div><h2 id="titulo">Inicio</h2><div class="sub" id="subtitulo">Estado general del sistema</div></div>
+    <div class="tb-left">
+      <button class="hamb" type="button" onclick="abrirMenu()" aria-label="Menú"><i class="bi bi-list"></i></button>
+      <svg class="lg tb-logo"><use href="#lg-mark"/></svg>
+      <div class="tb-title"><h2 id="titulo">Inicio</h2><div class="sub" id="subtitulo">Resumen ejecutivo del sistema</div></div>
     </div>
-    <div class="fecha"><span class="pill">VERFRUT · RAPEL</span><i class="bi bi-calendar3"></i><span id="hoyTxt"></span></div>
+    <div class="tb-right">
+      <span class="pill">VERFRUT</span><span class="pill">RAPEL</span><span class="pill alt">VERFRUT · RAPEL</span>
+      <span class="fecha"><i class="bi bi-calendar3"></i><span id="hoyTxt"></span></span>
+    </div>
   </header>
 
   <div class="content">
 
 <!-- ================= INICIO ================= -->
 <section class="pantalla activa" id="p-inicio">
-  <div class="row g-3" id="kpis"></div>
-  <div class="row g-3 mt-1">
-    <div class="col-lg-5">
-      <div class="card p-3 h-100">
+  <div class="kpi-grid" id="kpis"></div>
+
+  <div class="grid-2 eq mt-18">
+    <div class="card p-3">
+      <div class="card-h">
         <h6><i class="bi bi-database-fill"></i> Estado de las bases</h6>
-        <div class="table-responsive"><table class="table tbl" id="tSync"><thead><tr><th>Empresa</th><th>Trabajadores</th><th>Última actualización</th></tr></thead><tbody></tbody></table></div>
-        <div class="d-flex gap-2 flex-wrap mt-3">
-          <label class="btn btn-gold btn-sm m-0"><i class="bi bi-upload"></i> Actualizar bases (subir Excel Lite)<input type="file" id="fSubir" accept=".xlsm,.xlsx" hidden onchange="subirExcel(this)"></label>
-        </div>
-        <div id="syncMsg" class="small mt-2"></div>
+        <label class="btn btn-primary btn-sm m-0"><i class="bi bi-cloud-arrow-up-fill"></i> Actualizar bases<input type="file" id="fSubir" accept=".xlsm,.xlsx" hidden onchange="subirExcel(this)"></label>
       </div>
+      <div class="table-wrap"><table class="table tbl compact" id="tSync"><thead><tr><th>Empresa</th><th>Trabajadores</th><th>Última actualización</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
+      <div id="syncMsg" class="msg"></div>
     </div>
-    <div class="col-lg-7">
-      <div class="card p-3 h-100">
-        <h6><i class="bi bi-clock-history"></i> Últimas fechas programadas</h6>
-        <div class="table-responsive"><table class="table tbl" id="tFechas"><thead><tr><th>Fecha Doc.</th><th>Registros</th><th>Finiquitos</th><th>Suspensiones</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="card p-3">
+      <div class="card-h">
+        <h6><i class="bi bi-clock-history"></i> Últimas programaciones</h6>
+        <button class="btn btn-light btn-sm" onclick="ir('resumen');location.hash='resumen'">Ver historial <i class="bi bi-arrow-right"></i></button>
       </div>
+      <div class="table-wrap"><table class="table tbl" id="tFechas"><thead><tr><th>Fecha</th><th>Registros</th><th>Finiquitos</th><th>Suspensiones</th><th class="text-end">Acción</th></tr></thead><tbody></tbody></table></div>
+    </div>
+  </div>
+
+  <div class="card p-3 mt-18">
+    <h6><i class="bi bi-lightning-charge-fill"></i> Accesos rápidos</h6>
+    <div class="quick">
+      <a class="qa" onclick="ir('dni');location.hash='dni'"><div class="ic"><i class="bi bi-person-vcard-fill"></i></div><div><b>Buscar trabajador</b><span>Ficha, antigüedad e historial</span></div><i class="bi bi-arrow-right go"></i></a>
+      <a class="qa" onclick="ir('registro');location.hash='registro'"><div class="ic"><i class="bi bi-journal-plus"></i></div><div><b>Registro masivo</b><span>Suspensiones y finiquitos por lote</span></div><i class="bi bi-arrow-right go"></i></a>
+      <a class="qa" onclick="ir('resumen');location.hash='resumen'"><div class="ic"><i class="bi bi-calendar2-week-fill"></i></div><div><b>Programaciones</b><span>Resumen, firmas y correo</span></div><i class="bi bi-arrow-right go"></i></a>
+      <a class="qa" onclick="ir('responsables');location.hash='responsables'"><div class="ic"><i class="bi bi-people-fill"></i></div><div><b>Responsables</b><span>Analista y supervisor por fundo</span></div><i class="bi bi-arrow-right go"></i></a>
     </div>
   </div>
 </section>
 
-<!-- ================= BUSCAR DNI ================= -->
+<!-- ================= BUSCAR TRABAJADOR ================= -->
 <section class="pantalla" id="p-dni">
-  <div class="row g-3">
-    <div class="col-lg-4">
-      <div class="card p-3">
-        <h6><i class="bi bi-search"></i> Trabajador</h6>
-        <div class="input-group"><input class="form-control form-control-lg dni-input" id="dniIn" inputmode="numeric" placeholder="DNI"><button class="btn btn-primary px-3" onclick="buscarDNI()"><i class="bi bi-search"></i></button></div>
-        <div id="dniErr" class="text-danger small mt-2"></div>
-        <div id="ficha" class="mt-3"></div>
+  <div class="card hero-search">
+    <div class="hs-ico"><i class="bi bi-person-vcard"></i></div>
+    <div class="hs-body">
+      <label for="dniIn">Documento de identidad</label>
+      <div class="hs-row">
+        <input class="form-control dni-input" id="dniIn" inputmode="numeric" maxlength="12" placeholder="Ingresa el DNI" autocomplete="off">
+        <button class="btn" id="btnBuscar" onclick="buscarDNI()"><span class="spin"></span><i class="bi bi-search"></i><span>Buscar</span></button>
       </div>
+      <div id="dniErr" class="err-msg"></div>
     </div>
-    <div class="col-lg-8">
-      <div class="card p-3">
-        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-          <h6 class="mb-0"><i class="bi bi-list-ul"></i> Historial completo de programaciones <span class="small text-muted fw-normal" id="hCount"></span></h6>
-          <button class="btn btn-sm btn-outline-success" id="btnHistXls" style="display:none" onclick="excelHistorial()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
-        </div>
-        <div id="hResumen" class="mt-2"></div>
-        <div class="table-responsive hist mt-2" style="max-height:62vh"><table class="table tbl" id="tHist"><thead><tr>
-          <th>#</th><th>Fecha Doc.</th><th>Estatus</th><th>Empresa</th><th>F. firma</th><th>Sem.</th><th>Mes</th><th>Año</th><th>Fundo / Zona</th><th>Ruta</th><th>Código</th>
-          <th>Fundo (planilla)</th><th>Cargo</th><th>Estado contrato</th><th>Antig.</th><th>F. inicio</th><th>F. renov.</th><th>F. término</th>
-          <th>Inicio SL</th><th>Fin SL</th><th>Retorno</th><th>Días</th><th>Estado retorno</th><th>Cód. liq.</th><th>F. pago</th><th>Observación</th><th>Resp. sector</th><th>Apoyos</th><th>Horario</th><th>Origen</th><th>Registrado</th>
-        </tr></thead><tbody><tr><td colspan="31" class="empty">Busca un DNI para ver su historial</td></tr></tbody></table></div>
-      </div>
+  </div>
+
+  <div id="ficha"></div>
+
+  <div class="card p-3 mt-18">
+    <div class="card-h">
+      <h6 class="mb-0"><i class="bi bi-list-ul"></i> Historial completo de programaciones <span class="hint" id="hCount"></span></h6>
+      <button class="btn btn-sm btn-outline-success" id="btnHistXls" style="display:none" onclick="excelHistorial()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
     </div>
+    <div id="hResumen" class="mb-2"></div>
+    <div class="table-wrap hist mt-2"><table class="table tbl" id="tHist"><thead><tr>
+      <th>#</th><th>Fecha Doc.</th><th>Estatus</th><th>Empresa</th><th>F. firma</th><th>Sem.</th><th>Mes</th><th>Año</th><th>Fundo / Zona</th><th>Ruta</th><th>Código</th>
+      <th>Fundo (planilla)</th><th>Cargo</th><th>Estado contrato</th><th>Antig.</th><th>F. inicio</th><th>F. renov.</th><th>F. término</th>
+      <th>Inicio SL</th><th>Fin SL</th><th>Retorno</th><th>Días</th><th>Estado retorno</th><th>Cód. liq.</th><th>F. pago</th><th>Observación</th><th>Resp. sector</th><th>Apoyos</th><th>Horario</th><th>Origen</th><th>Registrado</th>
+    </tr></thead><tbody><tr><td colspan="31" class="empty"><i class="bi bi-search"></i>Busca un DNI para ver su historial</td></tr></tbody></table></div>
   </div>
 </section>
 
 <!-- ================= REGISTRO MASIVO ================= -->
 <section class="pantalla" id="p-registro">
-  <div class="row g-3">
-    <div class="col-lg-4">
-      <div class="card p-3">
-        <h6><span class="step">1</span> Datos del lote</h6>
-        <div class="mb-2"><label class="form-label small">Medida</label>
-          <select class="form-select" id="rMedida"><option>SUSPENSIÓN</option><option>FINIQUITO</option><option>SIN EFECTO</option></select></div>
-        <div class="row g-2">
-          <div class="col-6"><label class="form-label small">Fecha Doc. *</label><input type="date" class="form-control" id="rFechaDoc"></div>
-          <div class="col-6"><label class="form-label small">Fecha firma</label><input type="date" class="form-control" id="rFechaFirma"></div>
-        </div>
-        <div class="row g-2 mt-0" id="rSusp">
-          <div class="col-6"><label class="form-label small">Inicio SL *</label><input type="date" class="form-control" id="rIni"></div>
-          <div class="col-6"><label class="form-label small">Fin SL *</label><input type="date" class="form-control" id="rFin"></div>
-        </div>
-        <div class="row g-2 mt-0">
-          <div class="col-6"><label class="form-label small">Fundo / Zona</label><input class="form-control" id="rFundo" list="lFundos"><datalist id="lFundos"></datalist></div>
-          <div class="col-6"><label class="form-label small">Ruta</label><input class="form-control" id="rRuta" list="lRutas"><datalist id="lRutas"></datalist></div>
-        </div>
-        <div class="row g-2 mt-0">
-          <div class="col-6"><label class="form-label small">Código</label><input class="form-control" id="rCodigo"></div>
-          <div class="col-6" id="rRetW"><label class="form-label small">Estado retorno</label><input class="form-control" id="rRet" list="lRet"><datalist id="lRet"></datalist></div>
-        </div>
-        <div class="mt-2"><label class="form-label small">Observación</label><input class="form-control" id="rObs"></div>
-        <h6 class="mt-3"><span class="step">2</span> DNIs <span class="text-muted fw-normal small">(uno por línea o por coma)</span></h6>
-        <textarea class="form-control" id="rDnis" rows="7" placeholder="74918993&#10;74918994&#10;..."></textarea>
-        <div class="d-grid gap-2 mt-3">
-          <button class="btn btn-outline-primary" onclick="validar()"><i class="bi bi-check2-square"></i> Validar (vista previa)</button>
-          <button class="btn btn-success" id="btnGrabar" disabled onclick="grabar()"><i class="bi bi-save2"></i> Grabar lote</button>
-        </div>
-        <div id="rErr" class="text-danger small mt-2"></div>
+  <div class="stepper">
+    <div class="stp on"><div class="num">1</div><div><b>Configurar el lote</b><span>Medida, fechas, fundo y ruta</span></div></div>
+    <div class="stp"><div class="num">2</div><div><b>Ingresar y validar los DNI</b><span>Un DNI por línea o separados por coma</span></div></div>
+    <div class="stp"><div class="num">3</div><div><b>Revisar y confirmar</b><span>Vista previa, alertas y grabación</span></div></div>
+  </div>
+  <div class="grid-side">
+    <div class="card p-3">
+      <h6><span class="step">1</span> Datos del lote</h6>
+      <div class="mb-2"><label class="form-label small">Medida</label>
+        <select class="form-select" id="rMedida"><option>SUSPENSIÓN</option><option>FINIQUITO</option><option>SIN EFECTO</option></select></div>
+      <div class="row g-2">
+        <div class="col-6"><label class="form-label small">Fecha Doc. *</label><input type="date" class="form-control" id="rFechaDoc"></div>
+        <div class="col-6"><label class="form-label small">Fecha firma</label><input type="date" class="form-control" id="rFechaFirma"></div>
       </div>
+      <div class="row g-2 mt-0" id="rSusp">
+        <div class="col-6"><label class="form-label small">Inicio SL *</label><input type="date" class="form-control" id="rIni"></div>
+        <div class="col-6"><label class="form-label small">Fin SL *</label><input type="date" class="form-control" id="rFin"></div>
+      </div>
+      <div class="row g-2 mt-0">
+        <div class="col-6"><label class="form-label small">Fundo / Zona</label><input class="form-control" id="rFundo" list="lFundos"><datalist id="lFundos"></datalist></div>
+        <div class="col-6"><label class="form-label small">Ruta</label><input class="form-control" id="rRuta" list="lRutas"><datalist id="lRutas"></datalist></div>
+      </div>
+      <div class="row g-2 mt-0">
+        <div class="col-6"><label class="form-label small">Código</label><input class="form-control" id="rCodigo"></div>
+        <div class="col-6" id="rRetW"><label class="form-label small">Estado retorno</label><input class="form-control" id="rRet" list="lRet"><datalist id="lRet"></datalist></div>
+      </div>
+      <div class="mt-2"><label class="form-label small">Observación</label><input class="form-control" id="rObs"></div>
+      <h6 class="mt-3"><span class="step">2</span> Lista de DNI <span class="hint">(uno por línea o por coma)</span></h6>
+      <textarea class="form-control" id="rDnis" rows="7" placeholder="74918993&#10;74918994&#10;..."></textarea>
+      <div class="d-grid gap-2 mt-3">
+        <button class="btn btn-outline-primary" onclick="validar()"><i class="bi bi-check2-square"></i> Validar información</button>
+        <button class="btn btn-success" id="btnGrabar" disabled onclick="grabar()"><i class="bi bi-save2-fill"></i> Confirmar y grabar lote</button>
+      </div>
+      <div id="rErr" class="text-danger small mt-2"></div>
     </div>
-    <div class="col-lg-8">
-      <div class="card p-3">
-        <div class="d-flex justify-content-between flex-wrap align-items-center"><h6><span class="step">3</span> Vista previa</h6><div id="rTot" class="small text-muted"></div></div>
-        <div id="rAlertas"></div>
-        <div class="table-responsive"><table class="table tbl" id="tPrev"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Cargo</th><th>Antig.</th><th>Estado</th><th>Medida</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Alertas</th></tr></thead><tbody><tr><td colspan="11" class="empty">Completa el lote y presiona <b>Validar</b></td></tr></tbody></table></div>
-      </div>
+    <div class="card p-3">
+      <div class="card-h"><h6><span class="step">3</span> Vista previa</h6><div id="rTot" class="stat-row"></div></div>
+      <div id="rAlertas"></div>
+      <div class="table-wrap"><table class="table tbl" id="tPrev"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Cargo</th><th>Antig.</th><th>Estado</th><th>Medida</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Alertas</th></tr></thead><tbody><tr><td colspan="11" class="empty"><i class="bi bi-clipboard-check"></i>Completa el lote y presiona <b>Validar información</b></td></tr></tbody></table></div>
     </div>
   </div>
 </section>
 
-<!-- ================= RESUMEN ================= -->
+<!-- ================= PROGRAMACIONES ================= -->
 <section class="pantalla" id="p-resumen">
   <div class="card p-3 mb-3">
-    <div class="row g-2 align-items-end">
-      <div class="col-md-4"><label class="form-label small">Fecha Doc. (una o varias, separadas por coma)</label><input class="form-control" id="sFechas" placeholder="2026-08-19, 2026-08-20"></div>
-      <div class="col-auto"><label class="form-label small">Agregar</label><input type="date" class="form-control" id="sPick"></div>
-      <div class="col-auto"><button class="btn btn-primary" onclick="cargarResumen()"><i class="bi bi-arrow-repeat"></i> Generar</button></div>
-      <div class="col-auto"><button class="btn btn-outline-success" onclick="descargarExcel()"><i class="bi bi-file-earmark-excel"></i> Excel detalle</button></div>
-      <div class="col-auto"><button class="btn btn-gold" onclick="vistaCorreo()"><i class="bi bi-envelope-fill"></i> Correo</button></div>
+    <div class="filter-bar">
+      <div class="f-main"><label class="form-label small">Fechas documentarias <span class="text-muted fw-normal">(una o varias, separadas por coma)</span></label><input class="form-control" id="sFechas" placeholder="2026-08-19, 2026-08-20"></div>
+      <div><label class="form-label small">Agregar fecha</label><input type="date" class="form-control" id="sPick"></div>
+      <div class="f-actions">
+        <button class="btn btn-primary" onclick="cargarResumen()"><i class="bi bi-search"></i> Consultar</button>
+        <button class="btn btn-outline-success" onclick="descargarExcel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+        <button class="btn btn-gold" onclick="vistaCorreo()"><i class="bi bi-envelope-fill"></i> Preparar correo</button>
+      </div>
     </div>
   </div>
   <div class="row g-3" id="sKpis"></div>
   <div id="sAlertas" class="mt-3"></div>
   <div class="card p-3 mt-3">
-    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
-      <h6 class="mb-0"><i class="bi bi-table"></i> Tabla dinámica de lo programado <span class="small text-muted fw-normal">(ESTATUS → SECTOR → RUTA · columnas por Fecha Doc.)</span></h6>
+    <div class="card-h">
+      <h6 class="mb-0"><i class="bi bi-table"></i> Tabla dinámica de lo programado <span class="hint">(ESTATUS → SECTOR → RUTA · columnas por Fecha Doc.)</span></h6>
       <button class="btn btn-sm btn-outline-success" onclick="descargarExcel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
     </div>
-    <div class="table-responsive mt-2" id="pivWrap"><div class="empty">Genera un resumen para ver la tabla dinámica</div></div>
+    <div class="table-wrap" id="pivWrap"><div class="empty"><i class="bi bi-table"></i>Consulta una o varias fechas para ver la tabla dinámica</div></div>
   </div>
   <div class="card p-3 mt-3">
-    <h6><i class="bi bi-pen-fill"></i> Programación de firmas por sector <span class="small text-muted fw-normal">(horario, responsable y apoyos se guardan al salir del campo)</span></h6>
-    <div class="table-responsive"><table class="table tbl" id="tSect"><thead><tr><th>Fecha Doc.</th><th>Sector</th><th>Rutas</th><th>Finiq.</th><th>Susp.</th><th>S/E</th><th>Total</th><th>Horario</th><th>Responsable</th><th>Apoyos</th><th>Recordatorio</th></tr></thead><tbody><tr><td colspan="11" class="empty">Genera un resumen para ver los sectores</td></tr></tbody></table></div>
+    <h6><i class="bi bi-pen-fill"></i> Programación de firmas por sector <span class="hint">(horario, responsable y apoyos se guardan al salir del campo)</span></h6>
+    <div class="table-wrap"><table class="table tbl" id="tSect"><thead><tr><th>Fecha Doc.</th><th>Sector</th><th>Rutas</th><th>Finiq.</th><th>Susp.</th><th>S/E</th><th>Total</th><th>Horario</th><th>Responsable</th><th>Apoyos</th><th>Recordatorio</th></tr></thead><tbody><tr><td colspan="11" class="empty"><i class="bi bi-pen"></i>Consulta una fecha para ver los sectores</td></tr></tbody></table></div>
   </div>
-  <div class="row g-3 mt-1">
-    <div class="col-lg-5"><div class="card p-3 h-100"><h6><i class="bi bi-x-octagon-fill"></i> Finiquitos por fundo</h6><table class="table tbl" id="tFin"><thead><tr><th>Fundo / Sector</th><th>Cant.</th></tr></thead><tbody></tbody></table></div></div>
-    <div class="col-lg-7"><div class="card p-3 h-100"><h6><i class="bi bi-pause-circle-fill"></i> Suspensiones por fundo / periodo</h6><div class="table-responsive"><table class="table tbl" id="tSus"><thead><tr><th>Fundo / Sector</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Cant.</th></tr></thead><tbody></tbody></table></div></div></div>
+  <div class="grid-2 mt-18">
+    <div class="card p-3"><h6><i class="bi bi-x-octagon-fill"></i> Finiquitos por sector</h6><div class="table-wrap"><table class="table tbl" id="tFin"><thead><tr><th>Fundo / Sector</th><th>Cant.</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="card p-3"><h6><i class="bi bi-pause-circle-fill"></i> Suspensiones por periodo</h6><div class="table-wrap"><table class="table tbl" id="tSus"><thead><tr><th>Fundo / Sector</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Cant.</th></tr></thead><tbody></tbody></table></div></div>
   </div>
   <div class="card p-3 mt-3">
-    <h6><i class="bi bi-list-check"></i> Detalle nominal <span class="small text-muted fw-normal" id="dCount"></span></h6>
-    <div class="table-responsive" style="max-height:50vh;overflow:auto"><table class="table tbl" id="tDet"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Sector</th><th>Ruta</th><th>Estatus</th><th>Estado</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Observación</th><th></th></tr></thead><tbody></tbody></table></div>
+    <h6><i class="bi bi-list-check"></i> Detalle nominal <span class="hint" id="dCount"></span></h6>
+    <div class="table-wrap" style="max-height:55vh;overflow:auto"><table class="table tbl" id="tDet"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Sector</th><th>Ruta</th><th>Estatus</th><th>Estado</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Observación</th><th></th></tr></thead><tbody></tbody></table></div>
   </div>
 </section>
 
 <!-- ================= RESPONSABLES ================= -->
 <section class="pantalla" id="p-responsables">
-  <div class="card p-3">
-    <h6><i class="bi bi-people-fill"></i> Responsables por fundo <span class="small text-muted fw-normal">(valor por defecto en la programación de firmas)</span></h6>
-    <div class="table-responsive"><table class="table tbl" id="tResp"><thead><tr><th>Fundo</th><th>Analista</th><th>Correo analista</th><th>Supervisor</th><th>Correo supervisor</th><th></th></tr></thead><tbody></tbody></table></div>
-    <div class="row g-2 mt-2">
-      <div class="col-md-2"><input class="form-control form-control-sm" id="nFundo" placeholder="FUNDO"></div>
-      <div class="col-md-2"><input class="form-control form-control-sm" id="nAna" placeholder="Analista"></div>
-      <div class="col-md-2"><input class="form-control form-control-sm" id="nAnaC" placeholder="correo"></div>
-      <div class="col-md-2"><input class="form-control form-control-sm" id="nSup" placeholder="Supervisor"></div>
-      <div class="col-md-2"><input class="form-control form-control-sm" id="nSupC" placeholder="correo"></div>
-      <div class="col-md-2"><button class="btn btn-sm btn-primary w-100" onclick="guardarResp()"><i class="bi bi-save2"></i> Guardar</button></div>
+  <div class="grid-2 wide">
+    <div class="card p-3">
+      <h6><i class="bi bi-people-fill"></i> Responsables por fundo <span class="hint">(valor por defecto en la programación de firmas)</span></h6>
+      <div class="table-wrap"><table class="table tbl" id="tResp"><thead><tr><th>Fundo</th><th>Analista</th><th>Correo del analista</th><th>Supervisor</th><th>Correo del supervisor</th><th class="text-end">Acción</th></tr></thead><tbody></tbody></table></div>
+    </div>
+    <div class="card p-3">
+      <h6><i class="bi bi-pencil-square"></i> Asignar responsables</h6>
+      <div class="mb-2"><label class="form-label small">Fundo</label><input class="form-control" id="nFundo" placeholder="FUNDO"></div>
+      <div class="row g-2">
+        <div class="col-12 col-xl-6"><label class="form-label small">Analista</label><input class="form-control" id="nAna" placeholder="Nombre del analista"></div>
+        <div class="col-12 col-xl-6"><label class="form-label small">Correo del analista</label><input class="form-control" id="nAnaC" placeholder="correo@empresa.com"></div>
+      </div>
+      <div class="row g-2 mt-0">
+        <div class="col-12 col-xl-6"><label class="form-label small">Supervisor</label><input class="form-control" id="nSup" placeholder="Nombre del supervisor"></div>
+        <div class="col-12 col-xl-6"><label class="form-label small">Correo del supervisor</label><input class="form-control" id="nSupC" placeholder="correo@empresa.com"></div>
+      </div>
+      <div class="d-grid mt-3"><button class="btn btn-primary" onclick="guardarResp()"><i class="bi bi-save2-fill"></i> Guardar asignación</button></div>
     </div>
   </div>
 </section>
@@ -292,13 +528,13 @@
 </div><!-- /main -->
 
 <!-- Modal correo -->
-<div class="modal fade" id="mCorreo"><div class="modal-dialog modal-xl"><div class="modal-content" style="border-radius:14px">
-  <div class="modal-header"><h6 class="modal-title fw-bold" style="color:var(--navy)"><i class="bi bi-envelope-fill"></i> Correo de lo programado</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+<div class="modal fade" id="mCorreo"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h6 class="modal-title fw-bold d-flex align-items-center gap-2" style="color:var(--navy)"><svg class="lg" width="26" height="26"><use href="#lg-mark"/></svg> Correo de lo programado</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <div class="row g-2 mb-2">
-      <div class="col-md-8"><input class="form-control form-control-sm" id="cAsunto" readonly></div>
-      <div class="col-md-2"><input class="form-control form-control-sm" id="cPara" placeholder="Para"></div>
-      <div class="col-md-2"><input class="form-control form-control-sm" id="cCC" placeholder="CC"></div>
+      <div class="col-md-8"><label class="form-label small">Asunto</label><input class="form-control form-control-sm" id="cAsunto" readonly></div>
+      <div class="col-md-2"><label class="form-label small">Para</label><input class="form-control form-control-sm" id="cPara" placeholder="Para"></div>
+      <div class="col-md-2"><label class="form-label small">CC</label><input class="form-control form-control-sm" id="cCC" placeholder="CC"></div>
     </div>
     <div class="previa" id="cHtml"></div>
     <div id="cMsg" class="small mt-2"></div>
