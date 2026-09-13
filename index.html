@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ceses / SPL · Ingreso</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<script src="config.js"></script>
+<style>
+  :root{--navy:#061a35;--navy2:#0b2e5b;--blue:#1b5aa6;--cyan:#22b8cf;--gold:#f5b301;--gold2:#ffd45c;--ink:#0f1c2e}
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%}
+  body{font-family:Tahoma,"Segoe UI",sans-serif;font-size:10pt;color:#fff;overflow:hidden;
+       background:radial-gradient(1200px 800px at 10% 10%,#12407a 0%,transparent 60%),
+                  radial-gradient(900px 700px at 90% 90%,#0a4d5c 0%,transparent 55%),
+                  linear-gradient(160deg,#04122a 0%,#071f43 50%,#03101f 100%)}
+  /* luces animadas */
+  .orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:float 14s ease-in-out infinite;pointer-events:none}
+  .o1{width:520px;height:520px;background:#1b5aa6;top:-160px;left:-120px}
+  .o2{width:460px;height:460px;background:#f5b301;bottom:-180px;right:-120px;opacity:.28;animation-delay:-5s}
+  .o3{width:360px;height:360px;background:#22b8cf;top:40%;left:55%;opacity:.25;animation-delay:-9s}
+  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.08)}}
+  /* rejilla sutil */
+  .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 75%);pointer-events:none}
+  /* layout */
+  .wrap{position:relative;height:100%;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;max-width:1240px;margin:0 auto;padding:0 48px;gap:40px}
+  .brand{animation:in .8s ease both}
+  .logo{width:78px;height:78px;border-radius:22px;background:linear-gradient(145deg,#fff,#dfe7f3);display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.45),inset 0 1px 0 #fff;margin-bottom:26px}
+  .logo img{max-width:100%;max-height:100%;object-fit:contain}
+  .logo .mono{font-weight:900;color:var(--navy2);font-size:28px;letter-spacing:-1px}
+  .tag{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:999px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#cfe0f5;margin-bottom:18px}
+  .tag i{color:var(--gold)}
+  h1{font-size:44px;line-height:1.08;font-weight:800;letter-spacing:-.5px;margin-bottom:14px}
+  h1 span{background:linear-gradient(90deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .lead{color:#b8c9e0;font-size:15px;line-height:1.6;max-width:520px;margin-bottom:30px}
+  .chips{display:flex;flex-wrap:wrap;gap:10px}
+  .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(6px);padding:9px 14px;border-radius:12px;font-size:12.5px;color:#e6eef8;transition:all .2s}
+  .chip:hover{background:rgba(255,255,255,.12);transform:translateY(-2px)}
+  .chip i{color:var(--gold);font-size:15px}
+  .stats{display:flex;gap:28px;margin-top:34px}
+  .stat b{display:block;font-size:24px;font-weight:800;color:#fff}
+  .stat span{font-size:11px;color:#9fb3cc;letter-spacing:.8px;text-transform:uppercase}
+  /* card */
+  .card{position:relative;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:24px;padding:40px 38px;box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25);animation:in .8s .15s ease both;max-width:440px;justify-self:end;width:100%}
+  .card::before{content:"";position:absolute;inset:-1px;border-radius:25px;padding:1px;background:linear-gradient(135deg,rgba(255,212,92,.6),transparent 40%,transparent 60%,rgba(34,184,207,.5));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
+  .card h2{font-size:24px;font-weight:800;margin-bottom:4px}
+  .card .sub{color:#b8c9e0;font-size:13px;margin-bottom:26px}
+  label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#cfe0f5;margin-bottom:7px}
+  .field{position:relative;margin-bottom:16px}
+  .field i.ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9fb3cc;font-size:16px;transition:color .2s}
+  .field input{width:100%;background:rgba(6,26,53,.55);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:12px;padding:13px 44px 13px 42px;font-family:Tahoma;font-size:14px;outline:none;transition:all .2s}
+  .field input::placeholder{color:#7f93ad}
+  .field input:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(245,179,1,.18);background:rgba(6,26,53,.75)}
+  .field input:focus + i.ic, .field:focus-within i.ic{color:var(--gold)}
+  .eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:0;color:#9fb3cc;cursor:pointer;font-size:16px;padding:4px}
+  .eye:hover{color:#fff}
+  .btn{width:100%;margin-top:6px;padding:14px;border:0;border-radius:12px;font-family:Tahoma;font-weight:800;font-size:14px;letter-spacing:.4px;color:var(--ink);cursor:pointer;background:linear-gradient(90deg,#e6a600,var(--gold) 50%,var(--gold2));background-size:200% 100%;box-shadow:0 10px 28px rgba(245,179,1,.35);transition:all .25s}
+  .btn:hover{background-position:100% 0;transform:translateY(-2px);box-shadow:0 16px 36px rgba(245,179,1,.45)}
+  .btn:active{transform:translateY(0)}
+  .btn.loading{opacity:.7;pointer-events:none}
+  .err{color:#ff8a80;font-size:12.5px;margin-top:12px;min-height:18px;display:flex;align-items:center;gap:6px}
+  .foot{margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#9fb3cc}
+  .foot .lock{display:flex;align-items:center;gap:6px}
+  .foot .lock i{color:#3ccf7a}
+  .copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:11px;color:#7f93ad;letter-spacing:.6px}
+  @keyframes in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
+  @media (max-width:980px){
+    body{overflow:auto}
+    .wrap{grid-template-columns:1fr;padding:40px 20px 70px;gap:26px;align-content:start}
+    h1{font-size:30px}.lead{font-size:14px}.stats{display:none}.card{justify-self:center;padding:30px 24px}.copy{position:static;margin-top:20px}
+  }
+</style>
+</head>
+<body>
+<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
+<div class="grid"></div>
+
+<div class="wrap">
+  <section class="brand">
+    <div class="logo"><img src="logo.png" alt="" onerror="this.outerHTML='<span class=mono>JT</span>'"></div>
+    <div class="tag"><i class="bi bi-stars"></i> Unifrutti Perú · Relaciones Laborales</div>
+    <h1>Programación de<br><span>Ceses / SPL</span></h1>
+    <p class="lead">Plataforma para gestionar finiquitos, suspensiones y sin efecto del personal obrero de VERFRUT y RAPEL, con validación automática de reglas laborales y resumen listo para enviar.</p>
+    <div class="chips">
+      <div class="chip"><i class="bi bi-shield-check"></i> Control de indeterminados</div>
+      <div class="chip"><i class="bi bi-lightning-charge-fill"></i> Registro masivo con alertas</div>
+      <div class="chip"><i class="bi bi-table"></i> Tabla dinámica por Fecha Doc.</div>
+      <div class="chip"><i class="bi bi-envelope-paper-fill"></i> Correo + Excel adjunto</div>
+      <div class="chip"><i class="bi bi-database-fill-check"></i> Bases SQL VERFRUT / RAPEL</div>
+    </div>
+    <div class="stats">
+      <div class="stat"><b id="stTrab">—</b><span>Trabajadores</span></div>
+      <div class="stat"><b id="stReg">—</b><span>Registros históricos</span></div>
+      <div class="stat"><b>2</b><span>Empresas</span></div>
+    </div>
+  </section>
+
+  <form class="card" id="f" autocomplete="on">
+    <h2>Bienvenido 👋</h2>
+    <div class="sub">Ingresa con tu usuario del sistema</div>
+    <label for="u">Usuario</label>
+    <div class="field"><i class="bi bi-person-fill ic"></i><input id="u" placeholder="tu.usuario" autocomplete="username" required autofocus></div>
+    <label for="p">Clave</label>
+    <div class="field"><i class="bi bi-lock-fill ic"></i><input id="p" type="password" placeholder="••••••••" autocomplete="current-password" required>
+      <button type="button" class="eye" id="eye" title="Mostrar / ocultar"><i class="bi bi-eye"></i></button></div>
+    <button class="btn" id="btn"><i class="bi bi-box-arrow-in-right"></i> Ingresar al sistema</button>
+    <div id="err" class="err"></div>
+    <div class="foot"><span class="lock"><i class="bi bi-shield-lock-fill"></i> Acceso protegido</span><span>Ceses / SPL Web · v1.1</span></div>
+  </form>
+</div>
+<div class="copy">© <span id="anio"></span> UNIFRUTTI PERÚ · RELACIONES LABORALES · DESARROLLADO POR JOEL TIMOTEO</div>
+
+<script>
+  anio.textContent = new Date().getFullYear();
+  eye.onclick = () => { const t = p.type === 'password'; p.type = t ? 'text' : 'password'; eye.firstElementChild.className = t ? 'bi bi-eye-slash' : 'bi bi-eye'; };
+  const post = d => fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) }).then(r => r.json());
+  post({ action: 'publico' }).then(d => { if (d && d.trabajadores != null) { stTrab.textContent = d.trabajadores.toLocaleString('es-PE'); stReg.textContent = d.registros.toLocaleString('es-PE'); } }).catch(() => {});
+  try { if (localStorage.getItem('ceses_token')) post({ action: 'yo', token: localStorage.getItem('ceses_token') }).then(u => { if (u && u.usuario) location.href = 'app.html'; }); } catch {}
+  f.onsubmit = async e => {
+    e.preventDefault(); err.textContent = ''; btn.classList.add('loading');
+    try {
+      const r = await post({ action: 'login', usuario: u.value.trim(), clave: p.value });
+      if (r.ok) { localStorage.setItem('ceses_token', r.token); location.href = 'app.html'; return; }
+      err.innerHTML = '<i class="bi bi-exclamation-circle"></i> ' + (r.error || 'Error');
+    } catch { err.innerHTML = '<i class="bi bi-exclamation-circle"></i> No se pudo conectar con el servidor'; }
+    btn.classList.remove('loading');
+  };
+</script>
+</body>
+</html>

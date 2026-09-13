@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Programación de Ceses / SPL · Unifrutti Perú</title>
+<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0b2e5b; --navy-2:#123f7a; --navy-3:#1b5aa6; --gold:#f5b301; --gold-2:#ffd45c;
+    --bg:#eef2f8; --card:#fff; --ink:#1c2b3a; --muted:#6b7a90; --line:#e3e8f0;
+    --ok:#1f9d55; --warn:#e69a00; --danger:#d63a3a; --info:#1565c0; --purple:#6a1b9a;
+    --sb:250px; --radius:14px; --shadow:0 6px 22px rgba(11,46,91,.08);
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:Tahoma,"Segoe UI",sans-serif;background:var(--bg);color:var(--ink);font-size:10pt}
+  .form-control,.form-select,.btn,.badge,table,.small,small{font-family:Tahoma,"Segoe UI",sans-serif}
+  .tbl td,.tbl thead th,.form-control,.form-select{font-size:10pt}
+  /* tabla dinámica */
+  .piv{border-collapse:collapse;font-family:Tahoma;font-size:10pt;width:100%}
+  .piv th,.piv td{border:1px solid #d9dfe8;padding:4px 8px;white-space:nowrap}
+  .piv thead th{background:#dce6f1;color:var(--navy);font-weight:700;text-align:center}
+  .piv thead th.grp{background:var(--navy);color:#fff}
+  .piv td.n{text-align:center}
+  .piv tr.est td{background:#f2f2f2;font-weight:700}
+  .piv tr.sec td{font-weight:600}
+  .piv tr.sub td{background:#e9eef6;font-weight:700}
+  .piv tr.subest td{background:#d6deea;font-weight:700}
+  .piv tr.gral td{background:var(--navy);color:#fff;font-weight:700}
+  .piv td.ok{color:var(--ok);font-weight:700}.piv td.falta{color:var(--danger);font-weight:700}
+  .piv input{font-family:Tahoma;font-size:10pt;border:1px solid #cfd7e3;border-radius:4px;padding:2px 6px;min-width:120px}
+  /* ---------- sidebar ---------- */
+  .sidebar{position:fixed;inset:0 auto 0 0;width:var(--sb);background:linear-gradient(180deg,var(--navy) 0%,#082246 100%);color:#fff;display:flex;flex-direction:column;z-index:100;box-shadow:4px 0 24px rgba(0,0,0,.18);transition:transform .25s}
+  .brand{display:flex;align-items:center;gap:12px;padding:20px 18px 16px;border-bottom:1px solid rgba(255,255,255,.08)}
+  .brand .logo{width:46px;height:46px;border-radius:12px;background:#fff;display:flex;align-items:center;justify-content:center;overflow:hidden;box-shadow:0 4px 12px rgba(0,0,0,.25);flex-shrink:0}
+  .brand .logo img{max-width:100%;max-height:100%;object-fit:contain}
+  .brand .logo .mono{font-weight:800;color:var(--navy);font-size:18px;letter-spacing:-.5px}
+  .brand h1{font-size:15px;font-weight:700;margin:0;line-height:1.15;letter-spacing:.3px}
+  .brand small{color:#9fb3cc;font-size:11px;letter-spacing:.8px;text-transform:uppercase}
+  .menu{padding:14px 12px;flex:1;display:flex;flex-direction:column;gap:4px}
+  .menu a{display:flex;align-items:center;gap:12px;padding:11px 14px;border-radius:10px;color:#c9d6e6;text-decoration:none;font-weight:500;transition:all .18s;position:relative}
+  .menu a i{font-size:17px;width:22px;text-align:center;opacity:.9}
+  .menu a:hover{background:rgba(255,255,255,.08);color:#fff;transform:translateX(2px)}
+  .menu a.active{background:linear-gradient(90deg,rgba(245,179,1,.22),rgba(245,179,1,.06));color:#fff}
+  .menu a.active::before{content:"";position:absolute;left:0;top:8px;bottom:8px;width:4px;border-radius:4px;background:var(--gold)}
+  .sb-foot{padding:14px 18px;border-top:1px solid rgba(255,255,255,.08);font-size:12px;color:#9fb3cc}
+  .sb-foot .user{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+  .sb-foot .avatar{width:34px;height:34px;border-radius:50%;background:var(--gold);color:var(--navy);font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+  .sb-foot .user b{color:#fff;display:block;font-size:13px}
+  .btn-salir{width:100%;border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;border-radius:8px;padding:6px;font-size:12px}
+  .btn-salir:hover{background:rgba(255,255,255,.1)}
+  /* ---------- topbar + content ---------- */
+  .main{margin-left:var(--sb);min-height:100vh;display:flex;flex-direction:column}
+  .topbar{display:flex;align-items:center;justify-content:space-between;padding:16px 28px;background:rgba(255,255,255,.7);backdrop-filter:blur(8px);border-bottom:1px solid var(--line);position:sticky;top:0;z-index:50}
+  .topbar h2{font-size:20px;font-weight:700;margin:0;color:var(--navy)}
+  .topbar .sub{color:var(--muted);font-size:12.5px}
+  .topbar .fecha{font-size:13px;color:var(--muted);display:flex;align-items:center;gap:8px}
+  .pill{background:linear-gradient(90deg,var(--navy-2),var(--navy-3));color:#fff;padding:5px 12px;border-radius:999px;font-size:12px;font-weight:600}
+  .content{padding:22px 28px 40px;animation:fade .35s ease}
+  @keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+  .hamb{display:none;border:0;background:var(--navy);color:#fff;border-radius:8px;width:38px;height:38px}
+  /* ---------- cards ---------- */
+  .card{border:0;border-radius:var(--radius);box-shadow:var(--shadow);background:var(--card)}
+  .card h6{font-weight:700;color:var(--navy);display:flex;align-items:center;gap:8px;margin-bottom:12px}
+  .card h6 i{color:var(--gold);background:rgba(245,179,1,.14);border-radius:8px;padding:6px;font-size:14px}
+  .kpi-card{position:relative;overflow:hidden;padding:18px 20px;color:#fff;border-radius:var(--radius);box-shadow:var(--shadow);min-height:104px;transition:transform .2s}
+  .kpi-card:hover{transform:translateY(-3px)}
+  .kpi-card .lbl{font-size:12px;opacity:.85;text-transform:uppercase;letter-spacing:.6px}
+  .kpi-card .val{font-size:30px;font-weight:800;line-height:1.1;margin-top:6px}
+  .kpi-card i.bg{position:absolute;right:-8px;bottom:-14px;font-size:84px;opacity:.14}
+  .g1{background:linear-gradient(135deg,#0b2e5b,#1b5aa6)}.g2{background:linear-gradient(135deg,#123f7a,#2f80ed)}
+  .g3{background:linear-gradient(135deg,#b8860b,#f5b301)}.g4{background:linear-gradient(135deg,#1f9d55,#3ccf7a)}
+  .kpi-mini{border-radius:12px;padding:12px 14px;text-align:center;background:#fff;box-shadow:var(--shadow);border-top:4px solid var(--navy)}
+  .kpi-mini .n{font-size:26px;font-weight:800;color:var(--navy)}.kpi-mini .t{font-size:11.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+  .kpi-mini.rojo{border-color:var(--danger)}.kpi-mini.rojo .n{color:var(--danger)}
+  .kpi-mini.amb{border-color:var(--warn)}.kpi-mini.amb .n{color:var(--warn)}
+  .kpi-mini.gris{border-color:#8a97a8}.kpi-mini.gris .n{color:#8a97a8}
+  /* ---------- tables ---------- */
+  .tbl{margin:0}.tbl thead th{background:#f4f7fb;color:var(--navy);text-transform:uppercase;letter-spacing:.3px;border-bottom:2px solid var(--line);white-space:nowrap}
+  .tbl td{padding:.45rem .6rem;white-space:nowrap;vertical-align:middle;border-color:var(--line)}
+  .tbl tbody tr:hover{background:#f8fafd}
+  .badge-est{font-size:11px;font-weight:600;padding:.35em .7em;border-radius:6px}
+  .al-INDETERMINADO,.al-SIN_EFECTO{color:var(--danger);font-weight:600}
+  .al-PROXIMO{color:var(--warn);font-weight:600}
+  .al-EMPLEADO_EXCLUIDO{color:var(--purple);font-weight:600}
+  .al-SUSP_30,.al-SUSP_ACUM{color:var(--info);font-weight:600}
+  .pantalla{display:none}.pantalla.activa{display:block}
+  .hist{max-height:300px;overflow:auto}
+  .previa{border:1px solid var(--line);background:#fff;padding:16px;border-radius:10px;max-height:60vh;overflow:auto}
+  input.firma{min-width:110px}
+  .form-control,.form-select{border-radius:9px;border-color:#d7deea}
+  .form-control:focus,.form-select:focus{border-color:var(--navy-3);box-shadow:0 0 0 3px rgba(27,90,166,.15)}
+  .form-label.small{font-weight:600;color:var(--muted);font-size:11.5px;text-transform:uppercase;letter-spacing:.4px;margin-bottom:3px}
+  .btn{border-radius:9px;font-weight:600}
+  .btn-primary{background:linear-gradient(90deg,var(--navy-2),var(--navy-3));border:0}
+  .btn-primary:hover{background:linear-gradient(90deg,var(--navy),var(--navy-2))}
+  .btn-gold{background:linear-gradient(90deg,#e0a300,var(--gold));border:0;color:var(--navy)}
+  .btn-gold:hover{filter:brightness(1.05);color:var(--navy)}
+  .btn-success{background:linear-gradient(90deg,#178a49,var(--ok));border:0}
+  .step{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--navy);color:#fff;font-size:12px;font-weight:700;margin-right:6px}
+  .alert{border:0;border-radius:12px}
+  .ficha-nombre{font-size:18px;font-weight:800;color:var(--navy)}
+  .rec.ok{color:var(--ok);font-weight:700}.rec.falta{color:var(--danger);font-weight:700}
+  .dni-input{font-size:22px;letter-spacing:2px;font-weight:600}
+  .empty{color:var(--muted);text-align:center;padding:26px;font-size:13px;white-space:normal}
+  @media (max-width:992px){
+    .sidebar{transform:translateX(-100%)}.sidebar.open{transform:none}
+    .main{margin-left:0}.hamb{display:inline-flex;align-items:center;justify-content:center}
+    .content{padding:14px}.topbar{padding:12px 14px}.kpi-card .val{font-size:24px}
+  }
+</style>
+</head>
+<body>
+
+<aside class="sidebar" id="sidebar">
+  <div class="brand">
+    <div class="logo"><img src="logo.png" alt="" onerror="this.outerHTML='<span class=mono>JT</span>'"></div>
+    <div><h1>CESES / SPL</h1><small>Unifrutti Perú · RR.LL.</small></div>
+  </div>
+  <nav class="menu">
+    <a href="#inicio" class="active" data-p="inicio"><i class="bi bi-grid-1x2-fill"></i> Inicio</a>
+    <a href="#dni" data-p="dni"><i class="bi bi-person-badge-fill"></i> Buscar DNI</a>
+    <a href="#registro" data-p="registro"><i class="bi bi-journal-plus"></i> Registro masivo</a>
+    <a href="#resumen" data-p="resumen"><i class="bi bi-calendar2-week-fill"></i> Resumen por Fecha Doc.</a>
+    <a href="#responsables" data-p="responsables"><i class="bi bi-people-fill"></i> Responsables</a>
+  </nav>
+  <div class="sb-foot">
+    <div class="user"><div class="avatar" id="avatar">J</div><div><b id="quien">—</b><span id="rol"></span></div></div>
+    <button class="btn-salir" onclick="salir()"><i class="bi bi-box-arrow-right"></i> Cerrar sesión</button>
+  </div>
+</aside>
+
+<div class="main">
+  <header class="topbar">
+    <div class="d-flex align-items-center gap-3">
+      <button class="hamb" onclick="document.getElementById('sidebar').classList.toggle('open')"><i class="bi bi-list fs-5"></i></button>
+      <div><h2 id="titulo">Inicio</h2><div class="sub" id="subtitulo">Estado general del sistema</div></div>
+    </div>
+    <div class="fecha"><span class="pill">VERFRUT · RAPEL</span><i class="bi bi-calendar3"></i><span id="hoyTxt"></span></div>
+  </header>
+
+  <div class="content">
+
+<!-- ================= INICIO ================= -->
+<section class="pantalla activa" id="p-inicio">
+  <div class="row g-3" id="kpis"></div>
+  <div class="row g-3 mt-1">
+    <div class="col-lg-5">
+      <div class="card p-3 h-100">
+        <h6><i class="bi bi-database-fill"></i> Estado de las bases</h6>
+        <div class="table-responsive"><table class="table tbl" id="tSync"><thead><tr><th>Empresa</th><th>Trabajadores</th><th>Última actualización</th></tr></thead><tbody></tbody></table></div>
+        <div class="d-flex gap-2 flex-wrap mt-3">
+          <label class="btn btn-gold btn-sm m-0"><i class="bi bi-upload"></i> Actualizar bases (subir Excel Lite)<input type="file" id="fSubir" accept=".xlsm,.xlsx" hidden onchange="subirExcel(this)"></label>
+        </div>
+        <div id="syncMsg" class="small mt-2"></div>
+      </div>
+    </div>
+    <div class="col-lg-7">
+      <div class="card p-3 h-100">
+        <h6><i class="bi bi-clock-history"></i> Últimas fechas programadas</h6>
+        <div class="table-responsive"><table class="table tbl" id="tFechas"><thead><tr><th>Fecha Doc.</th><th>Registros</th><th>Finiquitos</th><th>Suspensiones</th><th></th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= BUSCAR DNI ================= -->
+<section class="pantalla" id="p-dni">
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card p-3">
+        <h6><i class="bi bi-search"></i> Trabajador</h6>
+        <div class="input-group"><input class="form-control form-control-lg dni-input" id="dniIn" inputmode="numeric" placeholder="DNI"><button class="btn btn-primary px-3" onclick="buscarDNI()"><i class="bi bi-search"></i></button></div>
+        <div id="dniErr" class="text-danger small mt-2"></div>
+        <div id="ficha" class="mt-3"></div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+          <h6 class="mb-0"><i class="bi bi-list-ul"></i> Historial completo de programaciones <span class="small text-muted fw-normal" id="hCount"></span></h6>
+          <button class="btn btn-sm btn-outline-success" id="btnHistXls" style="display:none" onclick="excelHistorial()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+        </div>
+        <div id="hResumen" class="mt-2"></div>
+        <div class="table-responsive hist mt-2" style="max-height:62vh"><table class="table tbl" id="tHist"><thead><tr>
+          <th>#</th><th>Fecha Doc.</th><th>Estatus</th><th>Empresa</th><th>F. firma</th><th>Sem.</th><th>Mes</th><th>Año</th><th>Fundo / Zona</th><th>Ruta</th><th>Código</th>
+          <th>Fundo (planilla)</th><th>Cargo</th><th>Estado contrato</th><th>Antig.</th><th>F. inicio</th><th>F. renov.</th><th>F. término</th>
+          <th>Inicio SL</th><th>Fin SL</th><th>Retorno</th><th>Días</th><th>Estado retorno</th><th>Cód. liq.</th><th>F. pago</th><th>Observación</th><th>Resp. sector</th><th>Apoyos</th><th>Horario</th><th>Origen</th><th>Registrado</th>
+        </tr></thead><tbody><tr><td colspan="31" class="empty">Busca un DNI para ver su historial</td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= REGISTRO MASIVO ================= -->
+<section class="pantalla" id="p-registro">
+  <div class="row g-3">
+    <div class="col-lg-4">
+      <div class="card p-3">
+        <h6><span class="step">1</span> Datos del lote</h6>
+        <div class="mb-2"><label class="form-label small">Medida</label>
+          <select class="form-select" id="rMedida"><option>SUSPENSIÓN</option><option>FINIQUITO</option><option>SIN EFECTO</option></select></div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label small">Fecha Doc. *</label><input type="date" class="form-control" id="rFechaDoc"></div>
+          <div class="col-6"><label class="form-label small">Fecha firma</label><input type="date" class="form-control" id="rFechaFirma"></div>
+        </div>
+        <div class="row g-2 mt-0" id="rSusp">
+          <div class="col-6"><label class="form-label small">Inicio SL *</label><input type="date" class="form-control" id="rIni"></div>
+          <div class="col-6"><label class="form-label small">Fin SL *</label><input type="date" class="form-control" id="rFin"></div>
+        </div>
+        <div class="row g-2 mt-0">
+          <div class="col-6"><label class="form-label small">Fundo / Zona</label><input class="form-control" id="rFundo" list="lFundos"><datalist id="lFundos"></datalist></div>
+          <div class="col-6"><label class="form-label small">Ruta</label><input class="form-control" id="rRuta" list="lRutas"><datalist id="lRutas"></datalist></div>
+        </div>
+        <div class="row g-2 mt-0">
+          <div class="col-6"><label class="form-label small">Código</label><input class="form-control" id="rCodigo"></div>
+          <div class="col-6" id="rRetW"><label class="form-label small">Estado retorno</label><input class="form-control" id="rRet" list="lRet"><datalist id="lRet"></datalist></div>
+        </div>
+        <div class="mt-2"><label class="form-label small">Observación</label><input class="form-control" id="rObs"></div>
+        <h6 class="mt-3"><span class="step">2</span> DNIs <span class="text-muted fw-normal small">(uno por línea o por coma)</span></h6>
+        <textarea class="form-control" id="rDnis" rows="7" placeholder="74918993&#10;74918994&#10;..."></textarea>
+        <div class="d-grid gap-2 mt-3">
+          <button class="btn btn-outline-primary" onclick="validar()"><i class="bi bi-check2-square"></i> Validar (vista previa)</button>
+          <button class="btn btn-success" id="btnGrabar" disabled onclick="grabar()"><i class="bi bi-save2"></i> Grabar lote</button>
+        </div>
+        <div id="rErr" class="text-danger small mt-2"></div>
+      </div>
+    </div>
+    <div class="col-lg-8">
+      <div class="card p-3">
+        <div class="d-flex justify-content-between flex-wrap align-items-center"><h6><span class="step">3</span> Vista previa</h6><div id="rTot" class="small text-muted"></div></div>
+        <div id="rAlertas"></div>
+        <div class="table-responsive"><table class="table tbl" id="tPrev"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Cargo</th><th>Antig.</th><th>Estado</th><th>Medida</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Alertas</th></tr></thead><tbody><tr><td colspan="11" class="empty">Completa el lote y presiona <b>Validar</b></td></tr></tbody></table></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= RESUMEN ================= -->
+<section class="pantalla" id="p-resumen">
+  <div class="card p-3 mb-3">
+    <div class="row g-2 align-items-end">
+      <div class="col-md-4"><label class="form-label small">Fecha Doc. (una o varias, separadas por coma)</label><input class="form-control" id="sFechas" placeholder="2026-08-19, 2026-08-20"></div>
+      <div class="col-auto"><label class="form-label small">Agregar</label><input type="date" class="form-control" id="sPick"></div>
+      <div class="col-auto"><button class="btn btn-primary" onclick="cargarResumen()"><i class="bi bi-arrow-repeat"></i> Generar</button></div>
+      <div class="col-auto"><button class="btn btn-outline-success" onclick="descargarExcel()"><i class="bi bi-file-earmark-excel"></i> Excel detalle</button></div>
+      <div class="col-auto"><button class="btn btn-gold" onclick="vistaCorreo()"><i class="bi bi-envelope-fill"></i> Correo</button></div>
+    </div>
+  </div>
+  <div class="row g-3" id="sKpis"></div>
+  <div id="sAlertas" class="mt-3"></div>
+  <div class="card p-3 mt-3">
+    <div class="d-flex justify-content-between align-items-center flex-wrap gap-2">
+      <h6 class="mb-0"><i class="bi bi-table"></i> Tabla dinámica de lo programado <span class="small text-muted fw-normal">(ESTATUS → SECTOR → RUTA · columnas por Fecha Doc.)</span></h6>
+      <button class="btn btn-sm btn-outline-success" onclick="descargarExcel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+    </div>
+    <div class="table-responsive mt-2" id="pivWrap"><div class="empty">Genera un resumen para ver la tabla dinámica</div></div>
+  </div>
+  <div class="card p-3 mt-3">
+    <h6><i class="bi bi-pen-fill"></i> Programación de firmas por sector <span class="small text-muted fw-normal">(horario, responsable y apoyos se guardan al salir del campo)</span></h6>
+    <div class="table-responsive"><table class="table tbl" id="tSect"><thead><tr><th>Fecha Doc.</th><th>Sector</th><th>Rutas</th><th>Finiq.</th><th>Susp.</th><th>S/E</th><th>Total</th><th>Horario</th><th>Responsable</th><th>Apoyos</th><th>Recordatorio</th></tr></thead><tbody><tr><td colspan="11" class="empty">Genera un resumen para ver los sectores</td></tr></tbody></table></div>
+  </div>
+  <div class="row g-3 mt-1">
+    <div class="col-lg-5"><div class="card p-3 h-100"><h6><i class="bi bi-x-octagon-fill"></i> Finiquitos por fundo</h6><table class="table tbl" id="tFin"><thead><tr><th>Fundo / Sector</th><th>Cant.</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="col-lg-7"><div class="card p-3 h-100"><h6><i class="bi bi-pause-circle-fill"></i> Suspensiones por fundo / periodo</h6><div class="table-responsive"><table class="table tbl" id="tSus"><thead><tr><th>Fundo / Sector</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Cant.</th></tr></thead><tbody></tbody></table></div></div></div>
+  </div>
+  <div class="card p-3 mt-3">
+    <h6><i class="bi bi-list-check"></i> Detalle nominal <span class="small text-muted fw-normal" id="dCount"></span></h6>
+    <div class="table-responsive" style="max-height:50vh;overflow:auto"><table class="table tbl" id="tDet"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Sector</th><th>Ruta</th><th>Estatus</th><th>Estado</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Observación</th><th></th></tr></thead><tbody></tbody></table></div>
+  </div>
+</section>
+
+<!-- ================= RESPONSABLES ================= -->
+<section class="pantalla" id="p-responsables">
+  <div class="card p-3">
+    <h6><i class="bi bi-people-fill"></i> Responsables por fundo <span class="small text-muted fw-normal">(valor por defecto en la programación de firmas)</span></h6>
+    <div class="table-responsive"><table class="table tbl" id="tResp"><thead><tr><th>Fundo</th><th>Analista</th><th>Correo analista</th><th>Supervisor</th><th>Correo supervisor</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="row g-2 mt-2">
+      <div class="col-md-2"><input class="form-control form-control-sm" id="nFundo" placeholder="FUNDO"></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" id="nAna" placeholder="Analista"></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" id="nAnaC" placeholder="correo"></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" id="nSup" placeholder="Supervisor"></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" id="nSupC" placeholder="correo"></div>
+      <div class="col-md-2"><button class="btn btn-sm btn-primary w-100" onclick="guardarResp()"><i class="bi bi-save2"></i> Guardar</button></div>
+    </div>
+  </div>
+</section>
+
+  </div><!-- /content -->
+</div><!-- /main -->
+
+<!-- Modal correo -->
+<div class="modal fade" id="mCorreo"><div class="modal-dialog modal-xl"><div class="modal-content" style="border-radius:14px">
+  <div class="modal-header"><h6 class="modal-title fw-bold" style="color:var(--navy)"><i class="bi bi-envelope-fill"></i> Correo de lo programado</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body">
+    <div class="row g-2 mb-2">
+      <div class="col-md-8"><input class="form-control form-control-sm" id="cAsunto" readonly></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" id="cPara" placeholder="Para"></div>
+      <div class="col-md-2"><input class="form-control form-control-sm" id="cCC" placeholder="CC"></div>
+    </div>
+    <div class="previa" id="cHtml"></div>
+    <div id="cMsg" class="small mt-2"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn btn-outline-secondary" onclick="copiarHtml()"><i class="bi bi-clipboard"></i> Copiar (pegar en Outlook)</button>
+    <button class="btn btn-outline-success" onclick="descargarExcel()"><i class="bi bi-file-earmark-excel"></i> Descargar adjunto</button>
+    <button class="btn btn-primary" id="btnEnviar" onclick="enviarCorreo()"><i class="bi bi-send-fill"></i> Enviar por Gmail</button>
+  </div>
+</div></div></div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
