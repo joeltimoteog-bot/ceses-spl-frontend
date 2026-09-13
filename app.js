@@ -57,7 +57,9 @@ const TITULOS = {
   registro: ['Registro masivo', 'Suspensiones, finiquitos y sin efecto por lote'],
   resumen: ['Programaciones', 'Lo programado por sector, firmas y correo'],
   responsables: ['Responsables', 'Analista y supervisor por fundo'],
+  usuarios: ['Usuarios y permisos', 'Accesos, roles y claves del sistema'],
 };
+let yoAct = null;
 function ir(p) {
   if (!TITULOS[p]) p = 'inicio';
   document.querySelectorAll('.pantalla').forEach(s => s.classList.toggle('activa', s.id === 'p-' + p));
@@ -69,6 +71,7 @@ function ir(p) {
   if (p === 'inicio') cargarInicio();
   if (p === 'responsables') cargarResp();
   if (p === 'registro') cargarCatalogos();
+  if (p === 'usuarios') cargarUsuarios();
 }
 document.querySelectorAll('.menu a[data-p]').forEach(a => a.onclick = e => { e.preventDefault(); ir(a.dataset.p); location.hash = a.dataset.p; });
 // menú lateral: móvil (hamburguesa) y escritorio (contraer)
@@ -359,11 +362,57 @@ async function guardarResp() {
   ['#nFundo', '#nAna', '#nAnaC', '#nSup', '#nSupC'].forEach(s => $(s).value = ''); cargarResp();
 }
 
+// ---------- usuarios y permisos ----------
+let usuariosAct = [];
+async function cargarUsuarios() {
+  const esAdmin = yoAct && yoAct.rol === 'admin';
+  document.querySelectorAll('#p-usuarios .grid-2 > .card, #p-usuarios .grid-2 > div > .card:first-child').forEach(c => c.style.display = esAdmin ? '' : 'none');
+  $('#p-usuarios .grid-2').style.gridTemplateColumns = esAdmin ? '' : '1fr';
+  if (!esAdmin) return;
+  try {
+    usuariosAct = await gas('usuarios');
+    $('#uCount').textContent = `(${usuariosAct.length})`;
+    $('#tUsr tbody').innerHTML = usuariosAct.map(x => `<tr class="${x.activo ? '' : 'table-secondary'}"><td><b>${esc(x.usuario)}</b></td><td>${esc(x.nombre)}</td>
+      <td><span class="st ${x.rol === 'admin' ? 'info' : x.rol === 'gerencia' ? 'purple' : 'gris'}">${esc(x.rol)}</span></td>
+      <td>${x.activo ? '<span class="st ok"><i class="bi bi-check-circle-fill"></i> Activo</span>' : '<span class="st bad"><i class="bi bi-x-circle-fill"></i> Inactivo</span>'}</td>
+      <td class="text-end"><button class="btn-ico" title="Editar" onclick='editarUsuario(${JSON.stringify(x)})'><i class="bi bi-pencil-fill"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin usuarios</td></tr>';
+  } catch (e) { $('#tUsr tbody').innerHTML = `<tr><td colspan="5" class="empty text-danger">${esc(e.message)}</td></tr>`; }
+}
+function nuevoUsuario() {
+  $('#uFormTit').textContent = 'Nuevo usuario'; $('#uUsuario').value = ''; $('#uUsuario').readOnly = false; $('#uNombre').value = ''; $('#uRol').value = 'analista'; $('#uActivo').value = 'SI'; $('#uClave').value = '';
+  $('#uClaveHint').textContent = '(mínimo 6 caracteres)'; $('#uMsg').innerHTML = ''; $('#uUsuario').focus();
+}
+function editarUsuario(x) {
+  $('#uFormTit').textContent = 'Editar: ' + x.usuario; $('#uUsuario').value = x.usuario; $('#uUsuario').readOnly = true; $('#uNombre').value = x.nombre || ''; $('#uRol').value = x.rol || 'analista'; $('#uActivo').value = x.activo ? 'SI' : 'NO'; $('#uClave').value = '';
+  $('#uClaveHint').textContent = '(déjala vacía para no cambiarla)'; $('#uMsg').innerHTML = ''; $('#uNombre').focus(); $('#uUsuario').scrollIntoView({ behavior: 'smooth', block: 'center' });
+}
+async function guardarUsuario() {
+  const b = { usuario: $('#uUsuario').value.trim(), nombre: $('#uNombre').value.trim(), rol: $('#uRol').value, activo: $('#uActivo').value, clave: $('#uClave').value };
+  if (!b.usuario) { $('#uMsg').innerHTML = '<span class="text-danger">Ingresa el usuario</span>'; return; }
+  if (b.clave && b.clave.length < 6) { $('#uMsg').innerHTML = '<span class="text-danger">La clave debe tener al menos 6 caracteres</span>'; return; }
+  $('#btnUsr').disabled = true; $('#uMsg').innerHTML = '<span class="text-muted">Guardando…</span>';
+  try {
+    const r = await gas('guardarUsuario', b);
+    $('#uMsg').innerHTML = `<span class="text-success"><i class="bi bi-check-circle-fill"></i> Usuario ${r.modo}</span>`;
+    nuevoUsuario(); cargarUsuarios();
+  } catch (e) { $('#uMsg').innerHTML = `<span class="text-danger">${esc(e.message)}</span>`; }
+  $('#btnUsr').disabled = false;
+}
+async function cambiarMiClave() {
+  const a = $('#cNueva').value, b = $('#cNueva2').value;
+  if (a.length < 6) { $('#cClaveMsg').innerHTML = '<span class="text-danger">Mínimo 6 caracteres</span>'; return; }
+  if (a !== b) { $('#cClaveMsg').innerHTML = '<span class="text-danger">Las claves no coinciden</span>'; return; }
+  try { await gas('cambiarClave', { nueva: a }); $('#cNueva').value = ''; $('#cNueva2').value = ''; $('#cClaveMsg').innerHTML = '<span class="text-success"><i class="bi bi-check-circle-fill"></i> Clave actualizada. Úsala en tu próximo ingreso.</span>'; }
+  catch (e) { $('#cClaveMsg').innerHTML = `<span class="text-danger">${esc(e.message)}</span>`; }
+}
+
 // ---------- arranque ----------
 (async () => {
   const yo = await api('/api/yo');
   if (!yo) { location.href = 'index.html'; return; }
+  yoAct = yo;
   $('#quien').textContent = yo.nombre; $('#rol').textContent = yo.rol; $('#avatar').textContent = (yo.nombre || 'U').trim()[0].toUpperCase();
+  if (yo.rol === 'admin') $('#mnuUsuarios').style.display = '';
   $('#hoyTxt').textContent = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   ir(location.hash.replace('#', '') || 'inicio');
 })();

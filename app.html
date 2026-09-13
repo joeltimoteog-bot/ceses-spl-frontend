@@ -335,9 +335,11 @@
     <a href="#resumen" data-p="resumen" title="Programaciones"><i class="bi bi-calendar2-week-fill"></i><span>Programaciones</span></a>
     <div class="menu-sec">Configuración</div>
     <a href="#responsables" data-p="responsables" title="Responsables"><i class="bi bi-people-fill"></i><span>Responsables</span></a>
+    <a href="#usuarios" data-p="usuarios" title="Usuarios y permisos" id="mnuUsuarios" style="display:none"><i class="bi bi-shield-lock-fill"></i><span>Usuarios y permisos</span></a>
   </nav>
   <div class="sb-foot">
     <div class="user"><div class="avatar" id="avatar">J</div><div class="user-txt"><b id="quien">—</b><span id="rol"></span></div></div>
+    <button class="btn-salir mb-2" onclick="ir('usuarios');location.hash='usuarios'" title="Mi clave"><i class="bi bi-key-fill"></i><span>Mi clave</span></button>
     <button class="btn-salir" onclick="salir()" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i><span>Cerrar sesión</span></button>
   </div>
 </aside>
@@ -520,6 +522,43 @@
         <div class="col-12 col-xl-6"><label class="form-label small">Correo del supervisor</label><input class="form-control" id="nSupC" placeholder="correo@empresa.com"></div>
       </div>
       <div class="d-grid mt-3"><button class="btn btn-primary" onclick="guardarResp()"><i class="bi bi-save2-fill"></i> Guardar asignación</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ================= USUARIOS ================= -->
+<section class="pantalla" id="p-usuarios">
+  <div class="grid-2 wide">
+    <div class="card p-3">
+      <div class="card-h">
+        <h6 class="mb-0"><i class="bi bi-shield-lock-fill"></i> Usuarios del sistema <span class="hint" id="uCount"></span></h6>
+        <button class="btn btn-light btn-sm" onclick="nuevoUsuario()"><i class="bi bi-person-plus-fill"></i> Nuevo usuario</button>
+      </div>
+      <div class="table-wrap"><table class="table tbl" id="tUsr"><thead><tr><th>Usuario</th><th>Nombre</th><th>Rol</th><th>Estado</th><th class="text-end">Acción</th></tr></thead><tbody><tr><td colspan="5" class="empty">Cargando…</td></tr></tbody></table></div>
+      <div class="msg text-muted mt-2"><b>Roles:</b> admin (todo, incluido eliminar registros y gestionar usuarios) · analista (registra y consulta) · gerencia (consulta).</div>
+    </div>
+    <div>
+      <div class="card p-3">
+        <h6><i class="bi bi-person-gear"></i> <span id="uFormTit">Nuevo usuario</span></h6>
+        <div class="mb-2"><label class="form-label small">Usuario</label><input class="form-control" id="uUsuario" placeholder="ej. aperez" autocomplete="off"></div>
+        <div class="mb-2"><label class="form-label small">Nombre completo</label><input class="form-control" id="uNombre" placeholder="Nombre y apellido"></div>
+        <div class="row g-2">
+          <div class="col-6"><label class="form-label small">Rol</label><select class="form-select" id="uRol"><option value="analista">Analista</option><option value="gerencia">Gerencia</option><option value="admin">Administrador</option></select></div>
+          <div class="col-6"><label class="form-label small">Estado</label><select class="form-select" id="uActivo"><option value="SI">Activo</option><option value="NO">Inactivo</option></select></div>
+        </div>
+        <div class="mt-2"><label class="form-label small">Clave <span class="text-muted fw-normal" id="uClaveHint">(mínimo 6 caracteres)</span></label><input class="form-control" id="uClave" type="text" autocomplete="new-password" placeholder="••••••"></div>
+        <div class="d-grid mt-3"><button class="btn btn-primary" id="btnUsr" onclick="guardarUsuario()"><i class="bi bi-save2-fill"></i> Guardar usuario</button></div>
+        <div id="uMsg" class="msg"></div>
+      </div>
+      <div class="card p-3 mt-18">
+        <h6><i class="bi bi-key-fill"></i> Cambiar mi clave</h6>
+        <div class="row g-2">
+          <div class="col-12"><input class="form-control" id="cNueva" type="password" autocomplete="new-password" placeholder="Nueva clave (mínimo 6)"></div>
+          <div class="col-12"><input class="form-control" id="cNueva2" type="password" autocomplete="new-password" placeholder="Repetir nueva clave"></div>
+        </div>
+        <div class="d-grid mt-2"><button class="btn btn-outline-primary" onclick="cambiarMiClave()"><i class="bi bi-check2-circle"></i> Actualizar mi clave</button></div>
+        <div id="cClaveMsg" class="msg"></div>
+      </div>
     </div>
   </div>
 </section>
