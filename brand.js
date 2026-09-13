@@ -19,7 +19,7 @@ window.BRAND_CONFIG = {
   managedBy: 'Servicio tecnológico administrado por TALVENIQ',
   restrictedAccess: 'Acceso exclusivo para usuarios autorizados',
   copyright: '© 2026 TALVENIQ · Human Strategy & Technology · Todos los derechos reservados',
-  version: 'v3.1',
+  version: 'v3.3',
   lastUpdate: '2026-09-13',
   // Módulo "Acerca de": deja vacío lo que aún no tengas; se mostrará "Por configurar"
   about: {

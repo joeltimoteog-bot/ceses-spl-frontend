@@ -10,13 +10,35 @@ const hoyISO = () => { const d = new Date(); return `${d.getFullYear()}-${String
 // ---------- API hacia Google Apps Script ----------
 const TOKEN_KEY = 'ceses_token';
 function token() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
+// Modo compatible: si la red corporativa bloquea POST, se reintenta por GET (?payload=JSON) y se recuerda en la sesión
+const MODO_GET_KEY = 'ceses_modo_get';
+const modoGet = () => { try { return sessionStorage.getItem(MODO_GET_KEY) === '1'; } catch { return false; } };
+const usarModoGet = v => { try { sessionStorage.setItem(MODO_GET_KEY, v ? '1' : '0'); } catch {} };
+const pistaHtml = txt => txt.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220);
+async function pedir_(payload, porGet) {
+  const cuerpo = JSON.stringify(payload); let r;
+  try {
+    r = porGet
+      ? await fetch(window.API_URL + (window.API_URL.includes('?') ? '&' : '?') + 'payload=' + encodeURIComponent(cuerpo), { method: 'GET', redirect: 'follow' })
+      : await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: cuerpo, redirect: 'follow' });
+  } catch (e) { const er = new Error('Sin conexión con el servidor (' + (e.message || 'red') + '). Revisa la red o el proxy de tu equipo.'); er.red = true; throw er; }
+  const txt = await r.text();
+  try { return JSON.parse(txt); }
+  catch { const er = new Error(`Respuesta inválida del servidor (HTTP ${r.status}${r.url && !r.url.includes('script.google') ? ' · ' + new URL(r.url).host : ''}). ${pistaHtml(txt) || 'Sin contenido'}`); er.red = true; throw er; }
+}
 async function gas(action, data = {}) {
-  let r;
-  try { r = await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, token: token(), ...data }), redirect: 'follow' }); }
-  catch (e) { throw new Error('Sin conexión con el servidor (' + (e.message || 'red') + '). Revisa la red o el proxy de tu equipo.'); }
-  const txt = await r.text(); let j;
-  try { j = JSON.parse(txt); }
-  catch { const pista = txt.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220); throw new Error(`Respuesta inválida del servidor (HTTP ${r.status}${r.url && !r.url.includes('script.google') ? ' · ' + new URL(r.url).host : ''}). ${pista || 'Sin contenido'}`); }
+  const payload = { action, token: token(), ...data };
+  const cabeGet = JSON.stringify(payload).length < 6000;   // los lotes grandes (grabar, subir Excel) siguen por POST
+  let j;
+  if (modoGet() && cabeGet) j = await pedir_(payload, true);
+  else {
+    try { j = await pedir_(payload, false); }
+    catch (e) {
+      if (!(e.red && cabeGet)) throw e;
+      j = await pedir_(payload, true);            // POST bloqueado → reintento por GET
+      usarModoGet(true); console.warn('TALVENIQ: POST bloqueado en esta red, usando modo compatible (GET).');
+    }
+  }
   if (j && j.error === 'No autenticado') { try { localStorage.removeItem(TOKEN_KEY); } catch {} location.href = 'index.html'; throw new Error('sesión'); }
   if (j && j.error) throw new Error(orgTexto(j.error));
   return j;

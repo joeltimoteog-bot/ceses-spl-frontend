@@ -328,7 +328,10 @@
 <script>
   anio.textContent = new Date().getFullYear();
   eye.onclick = () => { const t = p.type === 'password'; p.type = t ? 'text' : 'password'; eye.firstElementChild.className = t ? 'bi bi-eye-slash' : 'bi bi-eye'; };
-  const post = d => fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) }).then(r => r.json());
+  // Modo compatible: si la red bloquea POST, se reintenta por GET (?payload=JSON) y se avisa a app.js por sessionStorage
+  const porGet = d => fetch(window.API_URL + (window.API_URL.includes('?') ? '&' : '?') + 'payload=' + encodeURIComponent(JSON.stringify(d))).then(r => r.json());
+  const post = d => fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) }).then(r => r.json())
+    .catch(() => porGet(d).then(j => { try { sessionStorage.setItem('ceses_modo_get', '1'); } catch {} return j; }));
   post({ action: 'publico' }).then(d => { if (d && d.trabajadores != null) { stTrab.textContent = d.trabajadores.toLocaleString('es-PE'); stReg.textContent = d.registros.toLocaleString('es-PE'); } }).catch(() => {});
   try { if (localStorage.getItem('ceses_token')) post({ action: 'yo', token: localStorage.getItem('ceses_token') }).then(u => { if (u && u.usuario) location.href = 'app.html'; }); } catch {}
   f.onsubmit = async e => {
