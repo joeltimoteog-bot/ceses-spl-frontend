@@ -11,8 +11,12 @@ const hoyISO = () => { const d = new Date(); return `${d.getFullYear()}-${String
 const TOKEN_KEY = 'ceses_token';
 function token() { try { return localStorage.getItem(TOKEN_KEY) || ''; } catch { return ''; } }
 async function gas(action, data = {}) {
-  const r = await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, token: token(), ...data }) });
-  const j = await r.json().catch(() => ({ error: 'Respuesta inválida del servidor' }));
+  let r;
+  try { r = await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, token: token(), ...data }), redirect: 'follow' }); }
+  catch (e) { throw new Error('Sin conexión con el servidor (' + (e.message || 'red') + '). Revisa la red o el proxy de tu equipo.'); }
+  const txt = await r.text(); let j;
+  try { j = JSON.parse(txt); }
+  catch { const pista = txt.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220); throw new Error(`Respuesta inválida del servidor (HTTP ${r.status}${r.url && !r.url.includes('script.google') ? ' · ' + new URL(r.url).host : ''}). ${pista || 'Sin contenido'}`); }
   if (j && j.error === 'No autenticado') { try { localStorage.removeItem(TOKEN_KEY); } catch {} location.href = 'index.html'; throw new Error('sesión'); }
   if (j && j.error) throw new Error(orgTexto(j.error));
   return j;
@@ -114,6 +118,7 @@ async function cargarInicio() {
     const est = s ? '<span class="st ok"><i class="bi bi-check-circle-fill"></i> Sincronizada</span>' : '<span class="st bad"><i class="bi bi-exclamation-circle-fill"></i> Sin sincronizar</span>';
     return `<tr><td><span class="emp-tag">${esc(orgNombre(emp))}</span></td><td><b>${t.n.toLocaleString('es-PE')}</b></td><td>${s ? esc(s.fecha) : '<span class="text-muted">nunca</span>'}</td><td>${est}</td></tr>`;
   }).join('');
+  cargarAlertas();
   const f = await api('/api/programacion/fechas');
   $('#tFechas tbody').innerHTML = f.slice(0, 5).map(x => `<tr><td><b>${dmy(x.fecha_doc)}</b></td><td>${x.n}</td><td>${x.fin}</td><td>${x.sus}</td><td class="text-end"><button class="btn-ico" title="Ver programación" onclick="verFecha('${x.fecha_doc}')"><i class="bi bi-arrow-right"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin programaciones registradas</td></tr>';
 }
@@ -735,6 +740,37 @@ async function cerrarMisOtras() {
   try { const r = await gas('cerrarSesionesUsuario', { usuario: yoAct.usuario, excepto_actual: true }); toast(`Sesiones cerradas: ${r.sesiones_cerradas}`); cargarSesiones(); } catch (e) { toast(e.message, 'err'); }
 }
 
+// ---------- alertas laborales ----------
+let alertasAct = null;
+function pintarAlertasTiles(a) {
+  const r = a.resumen, p = a.parametros;
+  const tile = (n, t, ic, c) => `<div class="al ${c} ${n ? '' : 'zero'}"><div class="ic"><i class="bi ${ic}"></i></div><div><div class="n">${n}</div><div class="t">${t}</div></div></div>`;
+  $('#alGrid').innerHTML = tile(r.proximos_indeterminado, `Próximos a indeterminado (≤ ${p.diasIndet} d)`, 'bi-exclamation-octagon-fill', 'r') + tile(r.retornos, `Retornos en ${p.diasRet} días`, 'bi-arrow-repeat', 'b') + tile(r.acumulado_alto, `Acumulado anual ≥ ${p.umbralAcum} d`, 'bi-hourglass-split', 'w') + tile(r.sectores_firma, 'Sectores con firmas por completar', 'bi-pen-fill', 'p');
+  const chips = (tit, l) => l.length ? `<div class="al-f mb-1"><b class="me-1" style="font-size:11.5px;color:var(--navy)">${tit}:</b>${l.map(x => `<span>${esc(x.fundo)} · ${x.cant}</span>`).join('')}</div>` : '';
+  $('#alFundos').innerHTML = chips('Próx. indeterminado', a.proximos_por_fundo) + chips('Retornos', a.retornos_por_fundo) + chips('Acumulado alto', a.acum_por_fundo) + (a.firmas.length ? `<div class="al-f"><b class="me-1" style="font-size:11.5px;color:var(--navy)">Firmas:</b>${a.firmas.map(f => `<span>${dmy(f.fecha_doc)} ${esc(f.sector)}</span>`).join('')}</div>` : '');
+  $('#alFecha').textContent = `(al ${dmy(a.fecha)})`;
+}
+async function cargarAlertas() {
+  try { alertasAct = await gas('alertas'); pintarAlertasTiles(alertasAct); }
+  catch (e) { $('#alGrid').innerHTML = `<div class="empty text-danger">${esc(e.message)}</div>`; }
+}
+async function verAlertas() {
+  $('#dTit').textContent = 'Detalle de alertas laborales'; $('#dBody').innerHTML = '<div class="empty">Cargando…</div>'; bootstrap.Modal.getOrCreateInstance('#mDetalle').show();
+  try {
+    const a = await gas('alertas', { detalle: true }), d = a.detalle;
+    const tabla = (tit, filas, cab, fila) => `<h6 class="mt-2"><i class="bi bi-caret-right-fill"></i> ${tit} <span class="hint">(${filas.length})</span></h6><div class="table-wrap mb-3" style="max-height:260px"><table class="table tbl"><thead><tr>${cab.map(c => `<th>${c}</th>`).join('')}</tr></thead><tbody>${filas.map(fila).join('') || `<tr><td colspan="${cab.length}" class="empty">Sin registros</td></tr>`}</tbody></table></div>`;
+    $('#dBody').innerHTML =
+      tabla('Próximos a indeterminado', d.proximos, ['DNI', 'Nombres', 'Org.', 'Fundo', 'Cargo', 'Antigüedad', 'Indeterminado el', 'Faltan'], x => `<tr><td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.fundo)}</td><td>${esc(x.cargo)}</td><td>${x.antiguedad}</td><td><b>${dmy(x.fecha_indeterminado)}</b></td><td class="${x.faltan_dias <= 15 ? 'text-danger fw-bold' : ''}">${x.faltan_dias} d</td></tr>`) +
+      tabla('Retornos / fin de suspensión', d.retornos, ['DNI', 'Nombres', 'Org.', 'Fundo', 'Inicio SL', 'Fin SL', 'Retorno', 'Días', 'Estado'], x => `<tr><td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.fundo)}</td><td>${dmy(x.inicio_sl)}</td><td><b>${dmy(x.fin_sl)}</b></td><td>${dmy(x.retorno)}</td><td>${x.dias ?? ''}</td><td>${esc(x.estado_retorno)}</td></tr>`) +
+      tabla('Acumulado anual de suspensión alto', d.acumulado, ['DNI', 'Nombres', 'Org.', 'Fundo', 'Días', 'Suspensiones'], x => `<tr><td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.fundo)}</td><td class="${x.dias >= 90 ? 'text-danger fw-bold' : 'fw-bold'}">${x.dias}</td><td>${x.suspensiones}</td></tr>`) +
+      tabla('Firmas por completar (últimos 14 días)', a.firmas, ['Fecha Doc.', 'Sector', 'Registros', 'Sin horario', 'Sin responsable', 'Sin apoyos'], f => `<tr><td>${dmy(f.fecha_doc)}</td><td><b>${esc(f.sector)}</b></td><td>${f.total}</td><td>${f.sin_horario || ''}</td><td>${f.sin_responsable || ''}</td><td>${f.sin_apoyos || ''}</td></tr>`);
+  } catch (e) { $('#dBody').innerHTML = `<div class="empty text-danger">${esc(e.message)}</div>`; }
+}
+async function enviarAlertas() {
+  const c = await confirmar({ titulo: 'Enviar alertas por correo', msg: 'Se enviará el resumen de alertas laborales (cantidades por fundo) con el detalle nominal en Excel adjunto a los destinatarios configurados (ALERTAS_PARA).', btn: 'Enviar' }); if (!c.ok) return;
+  try { const r = await gas('enviarAlertas', {}); toast('Alertas enviadas a ' + esc(r.para)); } catch (e) { toast(e.message, 'err', 7000); }
+}
+
 // ---------- marca, organización activa, notificaciones, acerca de ----------
 function aplicarMarca() {
   const B = window.BRAND_CONFIG || {};
@@ -758,7 +794,8 @@ async function cargarNotificaciones() {
   const body = $('#notifBody');
   const base = [];
   if (yoAct && yoAct.debe_cambiar_clave) base.push({ tipo: 'warning', msg: 'Debes cambiar tu contraseña.' });
-  if (!puede('panel.ver')) { body.innerHTML = base.length ? base.map(nItem).join('') : '<div class="empty">Sin notificaciones</div>'; return; }
+  if (puede('inicio.ver')) { try { const a = alertasAct || await gas('alertas'); const r = a.resumen; if (r.proximos_indeterminado) base.push({ tipo: 'danger', msg: `${r.proximos_indeterminado} trabajador(es) próximos a indeterminado (≤ ${a.parametros.diasIndet} días).` }); if (r.retornos) base.push({ tipo: 'info', msg: `${r.retornos} retorno(s) / fin de suspensión en ${a.parametros.diasRet} días.` }); if (r.acumulado_alto) base.push({ tipo: 'warning', msg: `${r.acumulado_alto} trabajador(es) con acumulado anual ≥ ${a.parametros.umbralAcum} días.` }); if (r.sectores_firma) base.push({ tipo: 'warning', msg: `${r.sectores_firma} sector(es) con firmas por completar.` }); } catch {} }
+  if (!puede('panel.ver')) { body.innerHTML = base.length ? base.map(nItem).join('') : '<div class="empty">Sin notificaciones</div>'; $('#notifDot').hidden = !base.some(a => a.tipo === 'danger' || a.tipo === 'warning'); return; }
   body.innerHTML = '<div class="empty">Cargando…</div>';
   try {
     const r = await gas('panelResumen'); notifCache = r;
@@ -766,7 +803,7 @@ async function cargarNotificaciones() {
     const k = r.kpis || {};
     if (k.fallidos24) lista.push({ tipo: 'info', msg: `${k.fallidos24} intento(s) de ingreso fallido(s) en las últimas 24 h.` });
     body.innerHTML = lista.length ? lista.map(nItem).join('') : '<div class="ni ok"><i class="bi bi-check-circle-fill"></i><div>Sin alertas de seguridad. Todo en orden.</div></div>';
-    $('#notifDot').hidden = !(r.alertas || []).some(a => a.tipo === 'danger' || a.tipo === 'warning');
+    $('#notifDot').hidden = !lista.some(a => a.tipo === 'danger' || a.tipo === 'warning');
   } catch (e) { body.innerHTML = `<div class="empty text-danger">${esc(e.message)}</div>`; }
 }
 const nItem = a => `<div class="ni ${a.tipo}"><i class="bi ${a.tipo === 'danger' ? 'bi-exclamation-octagon-fill' : a.tipo === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i><div>${esc(orgTexto(a.msg))}</div></div>`;

@@ -404,6 +404,18 @@
   .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
   .about-grid .f-item .v.pend{color:var(--muted);font-weight:500;font-style:italic}
   @media (max-width:600px){.foot-x{padding:12px 14px}.about-grid{grid-template-columns:1fr}.tb-logo{display:block}}
+
+  /* ---------- alertas laborales ---------- */
+  .al-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+  .al{border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:12px;background:#fff}
+  .al .ic{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+  .al.r .ic{background:var(--danger-bg);color:var(--danger)}.al.w .ic{background:var(--warn-bg);color:#b57a00}.al.b .ic{background:var(--info-bg);color:var(--info)}.al.p .ic{background:var(--purple-bg);color:var(--purple)}
+  .al .n{font-size:22px;font-weight:800;color:var(--navy);line-height:1}.al .t{font-size:11.5px;color:var(--muted);font-weight:600;margin-top:3px}
+  .al.zero .n{color:#9aa7b8}
+  .al-f{display:inline-flex;gap:6px;flex-wrap:wrap;font-size:11.5px}
+  .al-f span{background:#f1f4f9;border-radius:999px;padding:2px 9px;color:#4c5b70}
+  @media (max-width:1100px){.al-grid{grid-template-columns:repeat(2,1fr)}}
+  @media (max-width:600px){.al-grid{grid-template-columns:1fr 1fr;gap:8px}.al{padding:10px}.al .n{font-size:18px}}
 </style>
 </head>
 <body>
@@ -461,7 +473,7 @@
     <div class="card p-3">
       <div class="card-h">
         <h6><i class="bi bi-database-fill"></i> Estado de las bases</h6>
-        <label class="btn btn-primary btn-sm m-0" data-perm="bases.actualizar_bases"><i class="bi bi-cloud-arrow-up-fill"></i> Actualizar bases<input type="file" id="fSubir" accept=".xlsm,.xlsx" hidden onchange="subirExcel(this)"></label>
+        <label class="btn btn-primary btn-sm m-0" data-perm="bases.actualizar_bases" title="Sube el Excel Lite con las dinámicas actualizadas. También puedes usar la macro SincronizarBases desde Excel."><i class="bi bi-cloud-arrow-up-fill"></i> Subir Excel Lite<input type="file" id="fSubir" accept=".xlsm,.xlsx" hidden onchange="subirExcel(this)"></label>
       </div>
       <div class="table-wrap"><table class="table tbl compact" id="tSync"><thead><tr><th>Organización</th><th>Trabajadores</th><th>Última actualización</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
       <div id="syncMsg" class="msg"></div>
@@ -473,6 +485,18 @@
       </div>
       <div class="table-wrap"><table class="table tbl" id="tFechas"><thead><tr><th>Fecha</th><th>Registros</th><th>Finiquitos</th><th>Suspensiones</th><th class="text-end">Acción</th></tr></thead><tbody></tbody></table></div>
     </div>
+  </div>
+
+  <div class="card p-3 mt-18" id="cardAlertas">
+    <div class="card-h">
+      <h6 class="mb-0"><i class="bi bi-bell-fill"></i> Alertas laborales <span class="hint" id="alFecha"></span></h6>
+      <div class="d-flex gap-2 flex-wrap">
+        <button class="btn btn-light btn-sm" onclick="verAlertas()" data-perm="buscar_trabajador.ver"><i class="bi bi-list-ul"></i> Ver detalle</button>
+        <button class="btn btn-gold btn-sm" onclick="enviarAlertas()" data-perm="correos.enviar_correo"><i class="bi bi-envelope-fill"></i> Enviar por correo</button>
+      </div>
+    </div>
+    <div class="al-grid" id="alGrid"><div class="empty">Calculando alertas…</div></div>
+    <div id="alFundos" class="mt-2"></div>
   </div>
 
   <div class="card p-3 mt-18">
