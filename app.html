@@ -3,15 +3,17 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CESES / SPL · Unifrutti Perú</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>TALVENIQ · Plataforma de Gestión Humana</title>
+<meta name="description" content="TALVENIQ · Plataforma de Gestión Humana">
+<meta name="application-name" content="TALVENIQ">
+<link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <style>
   /* ============================================================
-     CESES / SPL · Design system
+     TALVENIQ · Design system
      ============================================================ */
   :root{
     --navy:#0b2e5b; --navy-2:#123f7a; --navy-3:#1b5aa6; --navy-dark:#071b3c; --navy-ink:#0a2447;
@@ -42,7 +44,7 @@
   .brand-txt{min-width:0;overflow:hidden;white-space:nowrap}
   .brand h1{font-size:15.5px;font-weight:800;margin:0;line-height:1.1;letter-spacing:-.2px}
   .brand h1 em{font-style:normal;color:var(--gold)}
-  .brand small{display:block;color:#8fa3c0;font-size:10px;letter-spacing:1.4px;text-transform:uppercase;margin-top:3px;font-weight:600}
+  .brand small{display:block;color:#8fa3c0;font-size:10.5px;letter-spacing:.2px;margin-top:3px;font-weight:600}
   .sb-toggle{position:absolute;right:-13px;top:50%;transform:translateY(-50%);width:26px;height:26px;border-radius:50%;border:1px solid var(--line-2);background:#fff;color:var(--navy);display:none;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 2px 8px rgba(11,46,91,.15);transition:all .2s;font-size:12px;padding:0}
   .sb-toggle:hover{background:var(--navy);color:#fff;border-color:var(--navy)}
   .menu{padding:12px 12px;flex:1;display:flex;flex-direction:column;gap:2px;overflow-y:auto;overflow-x:hidden}
@@ -372,32 +374,46 @@
     .u-card .top{display:flex;justify-content:space-between;align-items:flex-start;gap:8px}
     .offcanvas{width:100%!important;border-radius:0}
   }
+
+  /* ---------- marca TALVENIQ ---------- */
+  .brand .lg.mark{width:44px;height:44px;object-fit:contain;background:#fff;border-radius:11px;padding:4px}
+  .brand h1{letter-spacing:.6px}
+  .tb-logo{width:34px;height:34px;object-fit:contain;background:#fff;border-radius:9px;padding:3px}
+  .sb-links{display:flex;gap:6px;margin-bottom:8px}
+  .sb-links a{flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:7px 6px;border-radius:9px;color:#b9c8dd;font-size:12px;font-weight:600;cursor:pointer;border:1px solid rgba(255,255,255,.1);transition:all .18s;white-space:nowrap;overflow:hidden}
+  .sb-links a:hover{background:rgba(255,255,255,.08);color:#fff}
+  .sb-brand{margin-top:10px;text-align:center;line-height:1.25}
+  .sb-brand b{display:block;font-size:11px;letter-spacing:2px;color:#8fa3c0}
+  .sb-brand span{display:block;font-size:9.5px;letter-spacing:1px;text-transform:uppercase;color:#5f7599}
+  body.sb-mini .sb-links a span,body.sb-mini .sb-brand span{display:none}
+  body.sb-mini .sb-brand b{font-size:9px;letter-spacing:1px}
+  .org-chips{display:inline-flex;gap:6px;flex-wrap:wrap}
+  .org-chips .pill{display:inline-flex;align-items:center;gap:6px}
+  .org-chips .pill i{font-size:11px;opacity:.85}
+  .notif{position:relative}
+  .bell{width:36px;height:36px;font-size:15px;position:relative}
+  .bell .dot{position:absolute;top:6px;right:7px;width:8px;height:8px;border-radius:50%;background:var(--danger);border:2px solid #fff}
+  .notif-menu{width:340px;max-width:90vw;padding:0;overflow:hidden}
+  .notif-menu .nm-h{padding:10px 14px;font-weight:700;color:var(--navy);border-bottom:1px solid var(--line);font-size:13px}
+  .notif-menu .ni{display:flex;gap:10px;padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px;line-height:1.35}
+  .notif-menu .ni i{flex-shrink:0;margin-top:2px}
+  .notif-menu .ni.danger i{color:var(--danger)}.notif-menu .ni.warning i{color:var(--warn)}.notif-menu .ni.info i{color:var(--info)}.notif-menu .ni.ok i{color:var(--ok)}
+  .notif-menu .empty{padding:18px}
+  .foot-x{margin-top:auto;padding:14px 28px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted);text-align:center;background:#fff}
+  .about-logo{display:block;width:min(320px,80%);margin:0 auto 14px}
+  .about-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:14px}
+  .about-grid .f-item .v.pend{color:var(--muted);font-weight:500;font-style:italic}
+  @media (max-width:600px){.foot-x{padding:12px 14px}.about-grid{grid-template-columns:1fr}.tb-logo{display:block}}
 </style>
 </head>
 <body>
-
-<!-- ===== Isotipo CESES / SPL (símbolo reutilizable) ===== -->
-<svg width="0" height="0" style="position:absolute" aria-hidden="true">
-  <symbol id="lg-mark" viewBox="0 0 64 64">
-    <defs>
-      <linearGradient id="lgBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#153f7c"/><stop offset="1" stop-color="#071b3c"/></linearGradient>
-      <linearGradient id="lgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eaaff"/><stop offset="1" stop-color="#1f6fe8"/></linearGradient>
-    </defs>
-    <rect width="64" height="64" rx="16" fill="url(#lgBg)"/>
-    <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="#fff" stroke-opacity=".12"/>
-    <path d="M45 18.5A18 18 0 1 0 45 45.5" fill="none" stroke="url(#lgC)" stroke-width="6" stroke-linecap="round"/>
-    <path d="M40 24C26 24 26 32 32.5 32S39 40 25 40" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
-    <circle cx="40" cy="24" r="3.6" fill="#f5b301"/>
-    <circle cx="25" cy="40" r="3.6" fill="#f5b301"/>
-  </symbol>
-</svg>
 
 <div class="backdrop" id="backdrop" onclick="cerrarMenu()"></div>
 
 <aside class="sidebar" id="sidebar">
   <div class="brand">
-    <svg class="lg"><use href="#lg-mark"/></svg>
-    <div class="brand-txt"><h1>CESES <em>/</em> SPL</h1><small>Relaciones Laborales</small></div>
+    <img class="lg mark" src="assets/talveniq-mark.png" alt="TALVENIQ">
+    <div class="brand-txt"><h1>TALVENIQ</h1><small>Plataforma de Gestión Humana</small></div>
     <button class="sb-toggle" type="button" onclick="toggleSidebar()" title="Contraer / expandir"><i class="bi bi-chevron-left"></i></button>
   </div>
   <nav class="menu">
@@ -414,8 +430,9 @@
   </nav>
   <div class="sb-foot">
     <div class="user"><div class="avatar" id="avatar">J</div><div class="user-txt"><b id="quien">—</b><span id="rol"></span></div></div>
-    <button class="btn-salir mb-2" onclick="abrirMiClave()" title="Cambiar mi contraseña"><i class="bi bi-key-fill"></i><span>Mi contraseña</span></button>
+    <div class="sb-links"><a onclick="abrirMiClave()" title="Cambiar mi contraseña"><i class="bi bi-key-fill"></i><span>Contraseña</span></a><a onclick="abrirAcerca()" title="Acerca de la plataforma"><i class="bi bi-info-circle-fill"></i><span>Acerca de</span></a></div>
     <button class="btn-salir" onclick="salir()" title="Cerrar sesión"><i class="bi bi-box-arrow-right"></i><span>Cerrar sesión</span></button>
+    <div class="sb-brand"><b>TALVENIQ</b><span>Human Strategy &amp; Technology</span></div>
   </div>
 </aside>
 
@@ -423,12 +440,14 @@
   <header class="topbar">
     <div class="tb-left">
       <button class="hamb" type="button" onclick="abrirMenu()" aria-label="Menú"><i class="bi bi-list"></i></button>
-      <svg class="lg tb-logo"><use href="#lg-mark"/></svg>
+      <img class="lg tb-logo" src="assets/talveniq-mark.png" alt="TALVENIQ">
       <div class="tb-title"><h2 id="titulo">Inicio</h2><div class="sub" id="subtitulo">Resumen ejecutivo del sistema</div></div>
     </div>
     <div class="tb-right">
-      <span class="pill">VERFRUT</span><span class="pill">RAPEL</span><span class="pill alt">VERFRUT · RAPEL</span>
+      <span class="org-chips" id="orgChips" title="Organización activa"></span>
       <span class="fecha"><i class="bi bi-calendar3"></i><span id="hoyTxt"></span></span>
+      <div class="dropdown notif"><button class="btn-ico bell" id="btnNotif" data-bs-toggle="dropdown" title="Notificaciones" onclick="cargarNotificaciones()"><i class="bi bi-bell-fill"></i><span class="dot" id="notifDot" hidden></span></button>
+        <div class="dropdown-menu dropdown-menu-end dd-menu notif-menu" id="notifMenu"><div class="nm-h">Centro de notificaciones</div><div id="notifBody" class="empty">Sin notificaciones</div></div></div>
     </div>
   </header>
 
@@ -444,7 +463,7 @@
         <h6><i class="bi bi-database-fill"></i> Estado de las bases</h6>
         <label class="btn btn-primary btn-sm m-0" data-perm="bases.actualizar_bases"><i class="bi bi-cloud-arrow-up-fill"></i> Actualizar bases<input type="file" id="fSubir" accept=".xlsm,.xlsx" hidden onchange="subirExcel(this)"></label>
       </div>
-      <div class="table-wrap"><table class="table tbl compact" id="tSync"><thead><tr><th>Empresa</th><th>Trabajadores</th><th>Última actualización</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
+      <div class="table-wrap"><table class="table tbl compact" id="tSync"><thead><tr><th>Organización</th><th>Trabajadores</th><th>Última actualización</th><th>Estado</th></tr></thead><tbody></tbody></table></div>
       <div id="syncMsg" class="msg"></div>
     </div>
     <div class="card p-3">
@@ -490,7 +509,7 @@
     </div>
     <div id="hResumen" class="mb-2"></div>
     <div class="table-wrap hist mt-2"><table class="table tbl" id="tHist"><thead><tr>
-      <th>#</th><th>Fecha Doc.</th><th>Estatus</th><th>Empresa</th><th>F. firma</th><th>Sem.</th><th>Mes</th><th>Año</th><th>Fundo / Zona</th><th>Ruta</th><th>Código</th>
+      <th>#</th><th>Fecha Doc.</th><th>Estatus</th><th>Organización</th><th>F. firma</th><th>Sem.</th><th>Mes</th><th>Año</th><th>Fundo / Zona</th><th>Ruta</th><th>Código</th>
       <th>Fundo (planilla)</th><th>Cargo</th><th>Estado contrato</th><th>Antig.</th><th>F. inicio</th><th>F. renov.</th><th>F. término</th>
       <th>Inicio SL</th><th>Fin SL</th><th>Retorno</th><th>Días</th><th>Estado retorno</th><th>Cód. liq.</th><th>F. pago</th><th>Observación</th><th>Resp. sector</th><th>Apoyos</th><th>Horario</th><th>Origen</th><th>Registrado</th>
     </tr></thead><tbody><tr><td colspan="31" class="empty"><i class="bi bi-search"></i>Busca un DNI para ver su historial</td></tr></tbody></table></div>
@@ -537,7 +556,7 @@
     <div class="card p-3">
       <div class="card-h"><h6><span class="step">3</span> Vista previa</h6><div id="rTot" class="stat-row"></div></div>
       <div id="rAlertas"></div>
-      <div class="table-wrap"><table class="table tbl" id="tPrev"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Cargo</th><th>Antig.</th><th>Estado</th><th>Medida</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Alertas</th></tr></thead><tbody><tr><td colspan="11" class="empty"><i class="bi bi-clipboard-check"></i>Completa el lote y presiona <b>Validar información</b></td></tr></tbody></table></div>
+      <div class="table-wrap"><table class="table tbl" id="tPrev"><thead><tr><th>DNI</th><th>Nombres</th><th>Org.</th><th>Cargo</th><th>Antig.</th><th>Estado</th><th>Medida</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Alertas</th></tr></thead><tbody><tr><td colspan="11" class="empty"><i class="bi bi-clipboard-check"></i>Completa el lote y presiona <b>Validar información</b></td></tr></tbody></table></div>
     </div>
   </div>
 </section>
@@ -574,7 +593,7 @@
   </div>
   <div class="card p-3 mt-3">
     <h6><i class="bi bi-list-check"></i> Detalle nominal <span class="hint" id="dCount"></span></h6>
-    <div class="table-wrap" style="max-height:55vh;overflow:auto"><table class="table tbl" id="tDet"><thead><tr><th>DNI</th><th>Nombres</th><th>Emp.</th><th>Sector</th><th>Ruta</th><th>Estatus</th><th>Estado</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Observación</th><th></th></tr></thead><tbody></tbody></table></div>
+    <div class="table-wrap" style="max-height:55vh;overflow:auto"><table class="table tbl" id="tDet"><thead><tr><th>DNI</th><th>Nombres</th><th>Org.</th><th>Sector</th><th>Ruta</th><th>Estatus</th><th>Estado</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Retorno</th><th>Cód.</th><th>Observación</th><th></th></tr></thead><tbody></tbody></table></div>
   </div>
 </section>
 
@@ -716,11 +735,12 @@
 </section>
 
   </div><!-- /content -->
+  <footer class="foot-x" id="footTxt">© 2026 TALVENIQ · Human Strategy &amp; Technology · Todos los derechos reservados</footer>
 </div><!-- /main -->
 
 <!-- Modal correo -->
 <div class="modal fade" id="mCorreo"><div class="modal-dialog modal-xl modal-dialog-scrollable"><div class="modal-content">
-  <div class="modal-header"><h6 class="modal-title fw-bold d-flex align-items-center gap-2" style="color:var(--navy)"><svg class="lg" width="26" height="26"><use href="#lg-mark"/></svg> Correo de lo programado</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-header"><h6 class="modal-title fw-bold d-flex align-items-center gap-2" style="color:var(--navy)"><img src="assets/talveniq-mark.png" width="26" height="26" alt=""> Correo de lo programado</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
   <div class="modal-body">
     <div class="row g-2 mb-2">
       <div class="col-md-8"><label class="form-label small">Asunto</label><input class="form-control form-control-sm" id="cAsunto" readonly></div>
@@ -791,10 +811,17 @@
   <div class="modal-footer"><button class="btn btn-primary w-100" onclick="cambiarMiClave()"><i class="bi bi-check2-circle"></i> Actualizar contraseña</button></div>
 </div></div></div>
 
+<!-- Modal: Acerca de la plataforma -->
+<div class="modal fade" id="mAcerca"><div class="modal-dialog modal-lg modal-dialog-scrollable"><div class="modal-content">
+  <div class="modal-header"><h6 class="modal-title fw-bold" style="color:var(--navy)"><i class="bi bi-info-circle-fill"></i> Acerca de la plataforma</h6><button class="btn-close" data-bs-dismiss="modal"></button></div>
+  <div class="modal-body" id="acercaBody"></div>
+</div></div></div>
+
 <div class="toast-wrap" id="toasts"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="config.js"></script>
+<script src="brand.js"></script>
 <script src="app.js"></script>
 </body>
 </html>

@@ -1,6 +1,6 @@
 'use strict';
 // ======================================================
-// Programación de Ceses / SPL Web — frontend
+// TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? '').replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -14,7 +14,7 @@ async function gas(action, data = {}) {
   const r = await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action, token: token(), ...data }) });
   const j = await r.json().catch(() => ({ error: 'Respuesta inválida del servidor' }));
   if (j && j.error === 'No autenticado') { try { localStorage.removeItem(TOKEN_KEY); } catch {} location.href = 'index.html'; throw new Error('sesión'); }
-  if (j && j.error) throw new Error(j.error);
+  if (j && j.error) throw new Error(orgTexto(j.error));
   return j;
 }
 // Traductor de las rutas antiguas (/api/...) a acciones del Apps Script
@@ -102,11 +102,11 @@ async function cargarInicio() {
     ['Última fecha documentada', dmy(e.programacion.ultima) || '—', 'bi-calendar-event-fill', 'g'],
     ['Programados para hoy', e.hoy, 'bi-calendar-check-fill', 'k'],
   ].map(([t, v, i, c]) => `<div class="kpi"><div class="ic ${c}"><i class="bi ${i}"></i></div><div><div class="lbl">${t}</div><div class="val">${v}</div></div></div>`).join('');
-  $('#tSync tbody').innerHTML = ['VERFRUT', 'RAPEL'].map(emp => {
+  $('#tSync tbody').innerHTML = Object.keys(window.ORGANIZATION_DISPLAY || {}).map(emp => {   // IDs internos; el nombre visible sale de ORGANIZATION_DISPLAY
     const t = e.trabajadores.find(x => x.empresa === emp) || { n: 0 };
     const s = e.sync.find(x => x.empresa === emp);
     const est = s ? '<span class="st ok"><i class="bi bi-check-circle-fill"></i> Sincronizada</span>' : '<span class="st bad"><i class="bi bi-exclamation-circle-fill"></i> Sin sincronizar</span>';
-    return `<tr><td><span class="emp-tag">${emp}</span></td><td><b>${t.n.toLocaleString('es-PE')}</b></td><td>${s ? esc(s.fecha) : '<span class="text-muted">nunca</span>'}</td><td>${est}</td></tr>`;
+    return `<tr><td><span class="emp-tag">${esc(orgNombre(emp))}</span></td><td><b>${t.n.toLocaleString('es-PE')}</b></td><td>${s ? esc(s.fecha) : '<span class="text-muted">nunca</span>'}</td><td>${est}</td></tr>`;
   }).join('');
   const f = await api('/api/programacion/fechas');
   $('#tFechas tbody').innerHTML = f.slice(0, 5).map(x => `<tr><td><b>${dmy(x.fecha_doc)}</b></td><td>${x.n}</td><td>${x.fin}</td><td>${x.sus}</td><td class="text-end"><button class="btn-ico" title="Ver programación" onclick="verFecha('${x.fecha_doc}')"><i class="bi bi-arrow-right"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin programaciones registradas</td></tr>';
@@ -114,11 +114,11 @@ async function cargarInicio() {
 async function subirExcel(inp) {
   const f = inp.files[0]; if (!f) return;
   if (f.size > 45 * 1048576) { $('#syncMsg').innerHTML = '<span class="text-danger">✖ El archivo supera 45 MB. Usa el Lite (más liviano) o la macro Sincronizar.</span>'; inp.value = ''; return; }
-  $('#syncMsg').innerHTML = `<span class="text-muted">Subiendo ${esc(f.name)} (${(f.size / 1048576).toFixed(1)} MB) y actualizando VERFRUT / RAPEL… puede tardar 1–2 min</span>`;
+  $('#syncMsg').innerHTML = `<span class="text-muted">Subiendo ${esc(f.name)} (${(f.size / 1048576).toFixed(1)} MB) y actualizando las bases de las organizaciones… puede tardar 1–2 min</span>`;
   try {
     const base64 = await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => ok(rd.result.split(',')[1]); rd.onerror = ko; rd.readAsDataURL(f); });
     const j = await gas('subirExcel', { base64, nombre: f.name });
-    $('#syncMsg').innerHTML = `<span class="text-success">✔ Bases actualizadas: VERFRUT ${j.filas.VERFRUT} · RAPEL ${j.filas.RAPEL}</span>`;
+    $('#syncMsg').innerHTML = `<span class="text-success">✔ Bases actualizadas: ${Object.keys(j.filas || {}).map(k => esc(orgNombre(k)) + ' ' + j.filas[k]).join(' · ')}</span>`;
     cargarInicio();
   } catch (e) { $('#syncMsg').innerHTML = `<span class="text-danger">✖ ${esc(e.message)}</span>`; }
   inp.value = '';
@@ -138,13 +138,13 @@ async function buscarDNI() {
     const t = await api('/api/trabajador/' + dni);
     const a = t.antiguedad;
     const estCls = t.estado === 'INDETERMINADO' ? 'danger' : t.estado === 'PERIODO DE PRUEBA' ? 'info' : '';
-    const aviso = t.en_base ? '' : `<div class="alert alert-warning py-2 small mb-3"><i class="bi bi-exclamation-triangle-fill"></i> <b>No está en la base activa VERFRUT / RAPEL</b> (cesado o no vigente). Último registro: ${badgeEst(t.ultimo_estatus)} ${dmy(t.ultimo_registro)}. Ficha tomada de su historial.</div>`;
+    const aviso = t.en_base ? '' : `<div class="alert alert-warning py-2 small mb-3"><i class="bi bi-exclamation-triangle-fill"></i> <b>No está en la base activa de las organizaciones</b> (cesado o no vigente). Último registro: ${badgeEst(t.ultimo_estatus)} ${dmy(t.ultimo_registro)}. Ficha tomada de su historial.</div>`;
     const reg = t.regimen_clasificado === 'EMPLEADO' ? '<span class="st purple">EMPLEADO — excluido</span>' : t.regimen_clasificado === 'OBRERO' ? '<span class="st ok">OBRERO</span>' : '<span class="st warn">POR DEFINIR</span>';
     const ini = (t.nombre_completo || '?').trim().split(/\s+/).slice(0, 2).map(s => s[0]).join('').toUpperCase();
     const item = (k, v, ic, cls = '') => `<div class="f-item ${cls}"><div class="k"><i class="bi ${ic}"></i>${k}</div><div class="v">${v || '—'}</div></div>`;
     $('#ficha').innerHTML = `<div class="card p-3 ficha">${aviso}
       <div class="f-head"><div class="f-av">${esc(ini)}</div><div><div class="ficha-nombre">${esc(t.nombre_completo)}</div>
-        <div class="f-tags"><span class="emp-tag">${esc(t.empresa)}</span> ${t.en_base ? reg : '<span class="st gris">NO VIGENTE</span>'} <span class="st info">DNI ${esc(dni)}</span></div></div></div>
+        <div class="f-tags"><span class="emp-tag">${esc(orgNombre(t.empresa))}</span> ${t.en_base ? reg : '<span class="st gris">NO VIGENTE</span>'} <span class="st info">DNI ${esc(dni)}</span></div></div></div>
       <div class="f-grid">
         ${item('Cargo', esc(t.cargo), 'bi-briefcase-fill')}
         ${item('Fundo', esc(t.centro_costo), 'bi-geo-alt-fill')}
@@ -165,7 +165,7 @@ async function buscarDNI() {
       <span class="badge rounded-pill text-bg-danger">${totF} finiquito(s)</span><span class="badge rounded-pill text-bg-warning">${totS} suspensión(es)</span><span class="badge rounded-pill text-bg-secondary">${totSE} sin efecto</span>
       ${t.por_anio.map(a => `<span class="badge rounded-pill" style="background:#e9eef6;color:var(--navy)">${a.anio}: ${a.sus} SPL · ${a.dias} días · ${a.fin} finiq.</span>`).join('')}</div>` : '';
     $('#tHist tbody').innerHTML = t.historial.map((h, i) => `<tr>
-      <td class="text-muted">${i + 1}</td><td><b>${dmy(h.fecha_doc)}</b></td><td>${badgeEst(h.estatus)}</td><td>${esc(h.empresa)}</td><td>${dmy(h.fecha_firma)}</td><td>${esc(h.semana_mes)}</td><td>${esc(h.mes)}</td><td>${h.anio ?? ''}</td>
+      <td class="text-muted">${i + 1}</td><td><b>${dmy(h.fecha_doc)}</b></td><td>${badgeEst(h.estatus)}</td><td>${esc(orgNombre(h.empresa))}</td><td>${dmy(h.fecha_firma)}</td><td>${esc(h.semana_mes)}</td><td>${esc(h.mes)}</td><td>${h.anio ?? ''}</td>
       <td><b>${esc(h.fundo_zona)}</b></td><td>${esc(h.ruta)}</td><td>${esc(h.codigo)}</td>
       <td>${esc(h.fundo)}</td><td>${esc(h.cargo)}</td><td class="${/INDETERMINADO/i.test(h.estado || '') ? 'text-danger fw-bold' : ''}">${esc(h.estado)}</td><td>${h.anios ?? ''}a ${h.meses ?? ''}m ${h.dias ?? ''}d</td>
       <td>${dmy(h.f_inicio)}</td><td>${dmy(h.f_renovacion)}</td><td>${dmy(h.f_termino)}</td>
@@ -222,10 +222,10 @@ function pintarPrevia(v) {
   for (const x of f) for (const a of x.alertas) porTipo[a.tipo] = (porTipo[a.tipo] || 0) + 1;
   const nombres = { INDETERMINADO: 'Indeterminados', SIN_EFECTO: 'Finiquitos → SIN EFECTO', PROXIMO: 'Próximos a indeterminado', EMPLEADO_EXCLUIDO: 'Empleados excluidos', SUSP_30: 'Suspensiones > 30 días', SUSP_ACUM: 'Acumulado anual > 90 días', REGIMEN_POR_DEFINIR: 'Cargo por definir' };
   let html = Object.entries(porTipo).map(([t, n]) => `<span class="me-3 al-${t}"><i class="bi bi-exclamation-triangle"></i> ${nombres[t] || t}: ${n}</span>`).join('');
-  if (v.noEncontrados.length) html += `<div class="text-danger small mt-1">No existen en la base: ${v.noEncontrados.join(', ')} → sincroniza VERFRUT/RAPEL si son ingresos recientes.</div>`;
+  if (v.noEncontrados.length) html += `<div class="text-danger small mt-1">No existen en la base: ${v.noEncontrados.join(', ')} → sincroniza las bases si son ingresos recientes.</div>`;
   $('#rAlertas').innerHTML = html ? `<div class="alert alert-light border py-2 small">${html}</div>` : '';
   $('#tPrev tbody').innerHTML = f.map(x => `<tr class="${x.excluido ? 'table-secondary' : ''}">
-    <td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${x.empresa}</td><td>${esc(x.cargo)}</td>
+    <td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.cargo)}</td>
     <td>${x.anios ?? '?'}a ${x.meses ?? '?'}m ${x.dias ?? '?'}d</td><td class="${x.estado === 'INDETERMINADO' ? 'text-danger fw-bold' : ''}">${esc(x.estado)}</td>
     <td>${x.excluido ? '<span class="badge bg-secondary">EXCLUIDO</span>' : badgeEst(x.estatus)}</td>
     <td>${x.cant_dias ?? ''}${x.domingos ? ` <small class="text-muted">(${x.domingos} dom)</small>` : ''}</td><td>${dmy(x.fecha_retorno)}</td><td>${esc(x.status02)}</td>
@@ -285,7 +285,7 @@ async function cargarResumen_(q) {
   $('#tSus tbody').innerHTML = r.suspensiones.map(s => `<tr><td>${esc(s.fundo)}</td><td>${dmy(s.inicio)}</td><td>${dmy(s.fin)}</td><td>${s.dias}</td><td><b>${s.cant}</b></td></tr>`).join('') || '<tr><td colspan="5" class="text-muted">—</td></tr>';
   const det = await api('/api/programacion?fechas=' + q);
   $('#dCount').textContent = `(${det.length})`;
-  $('#tDet tbody').innerHTML = det.map(d => `<tr><td>${d.dni}</td><td>${esc(d.nombres)}</td><td>${esc(d.empresa)}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${badgeEst(d.estatus)}</td><td>${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap">${esc(d.observacion)}</td><td class="text-end">${puede('programaciones.eliminar') ? `<button class="btn-ico danger" title="Eliminar" onclick="eliminar(${d.id})"><i class="bi bi-trash"></i></button>` : ''}</td></tr>`).join('') || '<tr><td colspan="14" class="empty">Sin registros para esa(s) fecha(s)</td></tr>';
+  $('#tDet tbody').innerHTML = det.map(d => `<tr><td>${d.dni}</td><td>${esc(d.nombres)}</td><td>${esc(orgNombre(d.empresa))}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${badgeEst(d.estatus)}</td><td>${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap">${esc(d.observacion)}</td><td class="text-end">${puede('programaciones.eliminar') ? `<button class="btn-ico danger" title="Eliminar" onclick="eliminar(${d.id})"><i class="bi bi-trash"></i></button>` : ''}</td></tr>`).join('') || '<tr><td colspan="14" class="empty">Sin registros para esa(s) fecha(s)</td></tr>';
 }
 function pintarDinamica(r) {
   const fechas = r.fechas;
@@ -348,7 +348,7 @@ async function vistaCorreo() {
   const f = fechasAct.length ? fechasAct : fechasSel();
   if (!f.length) return alert('Genera primero el resumen');
   const c = await api('/api/correo/vista?fechas=' + f.join(','));
-  $('#cAsunto').value = c.asunto; $('#cHtml').innerHTML = c.html; $('#cPara').value = c.para; $('#cCC').value = c.cc;
+  $('#cAsunto').value = orgTexto(c.asunto); $('#cHtml').innerHTML = orgTexto(c.html); $('#cPara').value = c.para; $('#cCC').value = c.cc;
   $('#btnEnviar').disabled = !c.smtp; $('#cMsg').innerHTML = '<span class="text-muted">Se enviará desde tu cuenta de Gmail con el Excel adjunto. También puedes <b>Copiar</b> y pegar en Outlook.</span>';
   new bootstrap.Modal('#mCorreo').show();
 }
@@ -729,15 +729,54 @@ async function cerrarMisOtras() {
   try { const r = await gas('cerrarSesionesUsuario', { usuario: yoAct.usuario, excepto_actual: true }); toast(`Sesiones cerradas: ${r.sesiones_cerradas}`); cargarSesiones(); } catch (e) { toast(e.message, 'err'); }
 }
 
+// ---------- marca, organización activa, notificaciones, acerca de ----------
+function aplicarMarca() {
+  const B = window.BRAND_CONFIG || {};
+  try { document.title = B.brandName + ' · ' + B.platformName; } catch {}
+  if (B.copyright) $('#footTxt').textContent = B.copyright;
+  $('#orgChips').innerHTML = Object.keys(window.ORGANIZATION_DISPLAY || {}).map(k => `<span class="pill" data-org="${esc(k)}"><i class="bi bi-building"></i>${esc(orgNombre(k))}</span>`).join('');
+}
+function abrirAcerca() {
+  const B = window.BRAND_CONFIG || {}, A = B.about || {};
+  const item = (k, v, link) => `<div class="f-item"><div class="k">${k}</div><div class="v ${v ? '' : 'pend'}">${v ? (link ? `<a href="${esc(v)}" target="_blank" rel="noopener">${esc(v)}</a>` : esc(v)) : 'Por configurar'}</div></div>`;
+  $('#acercaBody').innerHTML = `<img class="about-logo" src="${(window.LOGO_ASSETS || {}).horizontal || 'assets/talveniq-logo.png'}" alt="${esc(B.brandName)}">
+    <div class="text-center"><b style="font-size:16px;color:var(--navy);letter-spacing:1px">${esc(B.brandName)}</b><div style="font-size:11.5px;letter-spacing:1.6px;text-transform:uppercase;color:var(--navy-3);font-weight:600">${esc(B.taglineTitle)}</div></div>
+    <p class="mt-3" style="line-height:1.6">${esc(A.description || '')}</p>
+    <div class="text-center" style="font-size:13px"><b>${esc(B.managedBy && B.managedBy.replace('administrado', 'proporcionado') || 'Servicio tecnológico proporcionado por ' + B.brandName)}</b><div class="text-muted" style="font-size:12px;margin-top:3px">${esc(B.founderLabel)}</div></div>
+    <div class="about-grid">${item('Versión del sistema', B.version)}${item('Última actualización', B.lastUpdate)}${item('Términos de servicio', A.termsUrl, true)}${item('Política de privacidad', A.privacyUrl, true)}${item('Canal de soporte', A.supportChannel)}${item('Correo corporativo', A.corporateEmail)}</div>
+    <div class="text-center text-muted mt-3" style="font-size:11.5px">${esc(B.copyright)}</div>`;
+  bootstrap.Modal.getOrCreateInstance('#mAcerca').show();
+}
+let notifCache = null;
+async function cargarNotificaciones() {
+  const body = $('#notifBody');
+  const base = [];
+  if (yoAct && yoAct.debe_cambiar_clave) base.push({ tipo: 'warning', msg: 'Debes cambiar tu contraseña.' });
+  if (!puede('panel.ver')) { body.innerHTML = base.length ? base.map(nItem).join('') : '<div class="empty">Sin notificaciones</div>'; return; }
+  body.innerHTML = '<div class="empty">Cargando…</div>';
+  try {
+    const r = await gas('panelResumen'); notifCache = r;
+    const lista = base.concat(r.alertas || []);
+    const k = r.kpis || {};
+    if (k.fallidos24) lista.push({ tipo: 'info', msg: `${k.fallidos24} intento(s) de ingreso fallido(s) en las últimas 24 h.` });
+    body.innerHTML = lista.length ? lista.map(nItem).join('') : '<div class="ni ok"><i class="bi bi-check-circle-fill"></i><div>Sin alertas de seguridad. Todo en orden.</div></div>';
+    $('#notifDot').hidden = !(r.alertas || []).some(a => a.tipo === 'danger' || a.tipo === 'warning');
+  } catch (e) { body.innerHTML = `<div class="empty text-danger">${esc(e.message)}</div>`; }
+}
+const nItem = a => `<div class="ni ${a.tipo}"><i class="bi ${a.tipo === 'danger' ? 'bi-exclamation-octagon-fill' : a.tipo === 'warning' ? 'bi-exclamation-triangle-fill' : 'bi-info-circle-fill'}"></i><div>${esc(orgTexto(a.msg))}</div></div>`;
+
 // ---------- arranque ----------
 (async () => {
   let yo; try { yo = await api('/api/yo'); } catch { return; }
   if (!yo || !yo.usuario) { location.href = 'index.html'; return; }
   yoAct = yo; PERM = yo.permisos || {};
+  if (yo.organizaciones) Object.assign(window.ORGANIZATION_DISPLAY, yo.organizaciones);   // alias configurados por el administrador (pestaña config)
+  aplicarMarca();
   $('#quien').textContent = yo.nombre; $('#rol').textContent = yo.rol; $('#avatar').textContent = (yo.nombre || 'U').trim()[0].toUpperCase();
   $('#hoyTxt').textContent = new Date().toLocaleDateString('es-PE', { weekday: 'long', day: '2-digit', month: 'long', year: 'numeric' });
   aplicarPermisosUI();
   const destino = location.hash.replace('#', '') || primerModulo();
   ir(destino);
   if (yo.debe_cambiar_clave) abrirMiClave(true);
+  if (puede('panel.ver')) gas('panelResumen').then(r => { $('#notifDot').hidden = !(r.alertas || []).some(a => a.tipo === 'danger' || a.tipo === 'warning'); }).catch(() => {});
 })();

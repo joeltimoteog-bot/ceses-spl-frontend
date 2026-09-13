@@ -4,15 +4,18 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>CESES / SPL · Acceso</title>
-<link rel="icon" href="favicon.svg" type="image/svg+xml">
+<title>TALVENIQ · Plataforma de Gestión Humana</title>
+<meta name="description" content="TALVENIQ · Plataforma de Gestión Humana. Tecnología y servicios especializados para Recursos Humanos.">
+<meta name="application-name" content="TALVENIQ">
+<link rel="icon" href="assets/favicon.png" type="image/png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <script src="config.js"></script>
+<script src="brand.js"></script>
 <style>
   /* ============================================================
-     CESES / SPL · Login — application shell (2 paneles)
+     TALVENIQ · Login — application shell (2 paneles)
      ============================================================ */
   :root{
     --navy:#071C36; --navy-2:#0C2A4F; --corp:#145DA0; --electric:#2F80ED; --electric-2:#5EA8FF;
@@ -163,6 +166,27 @@
     *,*::before,*::after{animation:none!important;transition:none!important}
     .logo .lg-c,.logo .lg-s,.logo .lg-bar{stroke-dashoffset:0}.logo .lg-n{opacity:1}
   }
+
+  /* ---------- marca TALVENIQ ---------- */
+  .brand-top img.logo{width:58px;height:58px;object-fit:contain;filter:drop-shadow(0 10px 20px rgba(0,0,0,.35));animation:none}
+  .brand-top b{font-size:23px;letter-spacing:.5px}
+  .auth .logo-h{width:min(280px,70%);height:auto;display:block;margin-bottom:22px}
+  .stat b i{font-size:20px;color:var(--electric-2)}
+  .restricted{margin-top:18px;font-size:12.5px;color:var(--muted);display:flex;align-items:center;gap:7px}
+  .restricted i{color:var(--corp)}
+  .foot .links a{color:var(--corp);text-decoration:none;font-weight:600}
+  .foot .links a:hover{text-decoration:underline}
+  .provided{margin-top:16px;text-align:center;line-height:1.35}
+  .provided b{display:block;font-size:12.5px;color:var(--navy)}
+  .provided span{display:block;font-size:11px;letter-spacing:1.6px;text-transform:uppercase;color:var(--corp);font-weight:600;margin-top:2px}
+  .provided small{display:block;font-size:11px;color:var(--muted);margin-top:4px}
+  .legal-bg{position:fixed;inset:0;background:rgba(7,28,54,.55);display:none;align-items:center;justify-content:center;padding:20px;z-index:50}
+  .legal-bg.show{display:flex}
+  .legal{background:#fff;border-radius:18px;max-width:640px;width:100%;max-height:80vh;overflow:auto;padding:26px 28px;box-shadow:0 30px 80px rgba(7,28,54,.4);animation:fadeUp .25s var(--ease)}
+  .legal h3{font-size:18px;color:var(--navy);margin-bottom:10px}
+  .legal p{color:var(--muted);font-size:13.5px;line-height:1.6;margin-bottom:10px}
+  .legal .close{margin-top:14px;padding:10px 16px;border:0;border-radius:10px;background:var(--navy);color:#fff;font-weight:600;cursor:pointer}
+  @media (max-width:900px){.brand-top img.logo{width:46px;height:46px}.auth .logo-h{width:200px}.provided{margin-top:12px}}
 </style>
 </head>
 <body>
@@ -175,24 +199,13 @@
       <div class="glow a"></div><div class="glow b"></div><div class="glow c"></div>
 
       <div class="brand-top">
-        <!-- Isotipo CESES / SPL · versión completa (C + S + barra diagonal + nodos) -->
-        <svg class="logo" viewBox="0 0 64 64" role="img" aria-label="Logotipo CESES / SPL">
-          <defs>
-            <linearGradient id="lgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5EA8FF"/><stop offset="1" stop-color="#2F80ED"/></linearGradient>
-            <linearGradient id="lgB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2F80ED"/><stop offset="1" stop-color="#145DA0"/></linearGradient>
-          </defs>
-          <path class="lg-c" d="M40 17.2A19 19 0 1 0 40 46.8" fill="none" stroke="url(#lgC)" stroke-width="6.5" stroke-linecap="round"/>
-          <path class="lg-s" d="M39 23C29 23 29 32 34 32S39 41 29 41" fill="none" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round"/>
-          <path class="lg-bar" d="M53 17L45 47" fill="none" stroke="url(#lgB)" stroke-width="5" stroke-linecap="round"/>
-          <circle class="lg-n" cx="39" cy="23" r="3.3" fill="#F5B700"/>
-          <circle class="lg-n" cx="29" cy="41" r="3.3" fill="#F5B700"/>
-        </svg>
-        <div><b>CESES <i>/</i> SPL</b><span>Plataforma de Relaciones Laborales</span></div>
+        <img class="logo" src="assets/talveniq-mark.png" alt="TALVENIQ">
+        <div><b>TALVENIQ</b><span>Human Strategy &amp; Technology</span></div>
       </div>
 
       <div class="hero">
-        <h1>Gestión laboral <em>clara, segura y conectada.</em></h1>
-        <p>Programación de finiquitos y suspensiones, control de retornos y alertas laborales del personal de campo, con validación automática de reglas y reportes listos para enviar.</p>
+        <h1>Plataforma de <em>Gestión Humana</em></h1>
+        <p>Tecnología segura para optimizar la gestión de personas, relaciones laborales y procesos organizacionales.</p>
       </div>
 
       <div class="flow" aria-hidden="true">
@@ -243,16 +256,18 @@
         </svg>
       </div>
 
-      <div class="stats" aria-label="Indicadores del sistema">
-        <div class="stat"><b id="stTrab">—</b><span>Trabajadores</span></div>
-        <div class="stat"><b id="stReg">—</b><span>Registros</span></div>
-        <div class="stat"><b>2</b><span>Empresas</span></div>
+      <div class="stats" aria-label="Enfoque de la plataforma">
+        <div class="stat"><b><i class="bi bi-people-fill"></i></b><span>Gestión Humana</span></div>
+        <div class="stat"><b><i class="bi bi-shield-lock-fill"></i></b><span>Seguridad de procesos</span></div>
+        <div class="stat"><b><i class="bi bi-cpu-fill"></i></b><span>Automatización</span></div>
       </div>
-      <div class="org"><i class="bi bi-buildings-fill"></i> Entorno: Unifrutti Perú · VERFRUT · RAPEL</div>
+      <div class="org"><i class="bi bi-buildings-fill"></i> Tecnología y servicios especializados para Recursos Humanos</div>
+      <span id="stTrab" hidden></span><span id="stReg" hidden></span>
     </section>
 
     <!-- ================= PANEL DERECHO: ACCESO ================= -->
     <section class="auth" aria-labelledby="tit">
+      <img class="logo-h" src="assets/talveniq-logo.png" alt="TALVENIQ · Human Strategy &amp; Technology">
       <span class="tag">Acceso corporativo</span>
       <h2 id="tit">Bienvenido nuevamente</h2>
       <p class="sub">Ingresa tus credenciales para continuar.</p>
@@ -276,19 +291,36 @@
           <span class="secure"><i class="bi bi-shield-lock-fill"></i> Conexión protegida</span>
         </div>
 
-        <button class="btn" id="btn" type="submit"><span class="spin" aria-hidden="true"></span><i class="bi bi-box-arrow-in-right"></i> Ingresar al sistema</button>
+        <button class="btn" id="btn" type="submit"><span class="spin" aria-hidden="true"></span><i class="bi bi-box-arrow-in-right"></i> Ingresar a la plataforma</button>
         <div id="err" class="err" role="alert" aria-live="polite"></div>
       </form>
 
+      <div class="restricted"><i class="bi bi-person-lock"></i> Acceso exclusivo para usuarios autorizados</div>
       <div class="foot">
-        <span>Relaciones Laborales · Unifrutti Perú</span>
-        <span class="ver"><i class="bi bi-patch-check-fill"></i> CESES / SPL Web · v2.2</span>
+        <span class="links"><a href="#" onclick="abrirLegal('privacidad');return false">Privacidad</a> · <a href="#" onclick="abrirLegal('terminos');return false">Términos de servicio</a></span>
+        <span class="ver"><i class="bi bi-patch-check-fill"></i> <span id="verTxt">v3.1</span></span>
       </div>
-      <div class="copy">© <span id="anio"></span> Unifrutti Perú · Desarrollado por Joel Timoteo</div>
+      <div class="provided"><b>Plataforma proporcionada por TALVENIQ</b><span>Human Strategy &amp; Technology</span><small>Founded by Joel Timoteo Gonza</small></div>
+      <div class="copy" id="copyTxt">© <span id="anio"></span> TALVENIQ · Human Strategy &amp; Technology · Todos los derechos reservados</div>
     </section>
 
   </main>
 </div>
+
+<div class="legal-bg" id="legalBg" onclick="if(event.target===this)cerrarLegal()"><div class="legal" role="dialog" aria-modal="true"><h3 id="legalTit"></h3><div id="legalBody"></div><button class="close" onclick="cerrarLegal()">Cerrar</button></div></div>
+
+<!-- ===== Marca (solo presentación) ===== -->
+<script>
+  (function(){ const B = window.BRAND_CONFIG || {}; try { document.title = B.brandName + ' · ' + B.platformName; if (B.version) verTxt.textContent = B.version; if (B.copyright) copyTxt.innerHTML = B.copyright.replace('2026', '<span id="anio">2026</span>'); } catch(e){} })();
+  function abrirLegal(t){ const B = window.BRAND_CONFIG || {}, A = B.about || {}; const url = t === 'privacidad' ? A.privacyUrl : A.termsUrl;
+    if (url) { window.open(url, '_blank'); return; }
+    legalTit.textContent = t === 'privacidad' ? 'Política de privacidad' : 'Términos de servicio';
+    legalBody.innerHTML = t === 'privacidad'
+      ? '<p>La plataforma es un servicio tecnológico proporcionado por <b>' + B.brandName + '</b>. Los datos operativos de cada organización cliente se administran de forma separada, con control de acceso por usuario, registro de auditoría y almacenamiento cifrado de credenciales.</p><p>El documento completo de la política de privacidad está en preparación. Consulte con el administrador de la plataforma.</p>'
+      : '<p>El uso de la plataforma está reservado a usuarios autorizados por la organización cliente y por <b>' + B.brandName + '</b>. Toda actividad queda registrada. El acceso no autorizado, la extracción masiva de información o el uso indebido de credenciales están prohibidos.</p><p>Los términos de servicio completos están en preparación. Consulte con el administrador de la plataforma.</p>';
+    legalBg.classList.add('show'); }
+  function cerrarLegal(){ legalBg.classList.remove('show'); }
+</script>
 
 <!-- ===== Lógica de autenticación (sin cambios) ===== -->
 <script>
