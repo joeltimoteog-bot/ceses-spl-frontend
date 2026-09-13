@@ -3,140 +3,294 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>CESES / SPL · Ingreso</title>
+<meta name="color-scheme" content="light">
+<title>CESES / SPL · Acceso</title>
 <link rel="icon" href="favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 <script src="config.js"></script>
 <style>
-  :root{--navy:#061a35;--navy2:#0b2e5b;--blue:#1b5aa6;--cyan:#22b8cf;--gold:#f5b301;--gold2:#ffd45c;--ink:#0f1c2e}
+  /* ============================================================
+     CESES / SPL · Login — application shell (2 paneles)
+     ============================================================ */
+  :root{
+    --navy:#071C36; --navy-2:#0C2A4F; --corp:#145DA0; --electric:#2F80ED; --electric-2:#5EA8FF;
+    --bg:#F4F7FB; --white:#FFFFFF; --gold:#F5B700; --green:#22A06B;
+    --ink:#17253A; --muted:#66758A; --line:#E3E9F1; --line-2:#CFD8E4;
+    --err:#D64545; --err-bg:#FDEDED;
+    --r:26px; --t:200ms; --ease:cubic-bezier(.2,.7,.2,1);
+  }
   *{box-sizing:border-box;margin:0;padding:0}
-  html,body{height:100%}
-  body{font-family:Tahoma,"Segoe UI",sans-serif;font-size:10pt;color:#fff;overflow:hidden;
-       background:radial-gradient(1200px 800px at 10% 10%,#12407a 0%,transparent 60%),
-                  radial-gradient(900px 700px at 90% 90%,#0a4d5c 0%,transparent 55%),
-                  linear-gradient(160deg,#04122a 0%,#071f43 50%,#03101f 100%)}
-  /* luces animadas */
-  .orb{position:absolute;border-radius:50%;filter:blur(70px);opacity:.55;animation:float 14s ease-in-out infinite;pointer-events:none}
-  .o1{width:520px;height:520px;background:#1b5aa6;top:-160px;left:-120px}
-  .o2{width:460px;height:460px;background:#f5b301;bottom:-180px;right:-120px;opacity:.28;animation-delay:-5s}
-  .o3{width:360px;height:360px;background:#22b8cf;top:40%;left:55%;opacity:.25;animation-delay:-9s}
-  @keyframes float{0%,100%{transform:translate(0,0) scale(1)}50%{transform:translate(40px,-30px) scale(1.08)}}
-  /* rejilla sutil */
-  .grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.045) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.045) 1px,transparent 1px);background-size:44px 44px;mask-image:radial-gradient(ellipse at center,#000 30%,transparent 75%);pointer-events:none}
-  /* layout */
-  .wrap{position:relative;height:100%;display:grid;grid-template-columns:1.1fr .9fr;align-items:center;max-width:1240px;margin:0 auto;padding:0 48px;gap:40px}
-  .brand{animation:in .8s ease both}
-  /* logo CESES / SPL */
-  .logo{display:flex;align-items:center;gap:16px;margin-bottom:26px}
-  .logo svg.lg{width:78px;height:78px;flex-shrink:0;filter:drop-shadow(0 18px 40px rgba(0,0,0,.5));animation:lgFloat 6s ease-in-out infinite}
-  .logo .lg-c{stroke-dasharray:90;stroke-dashoffset:90;animation:lgDraw 1.1s .2s cubic-bezier(.4,0,.2,1) forwards}
-  .logo .lg-s{stroke-dasharray:60;stroke-dashoffset:60;animation:lgDraw .9s .8s cubic-bezier(.4,0,.2,1) forwards}
-  .logo .lg-n{opacity:0;transform-origin:center;transform-box:fill-box;animation:lgPop .5s 1.5s cubic-bezier(.3,1.5,.5,1) forwards,lgPulse 3.2s 2.2s ease-in-out infinite}
-  .logo .lg-n:nth-of-type(2){animation-delay:1.65s,2.4s}
-  .logo .lg-txt b{display:block;font-size:26px;font-weight:900;letter-spacing:-.5px;line-height:1;color:#fff}
-  .logo .lg-txt b i{font-style:normal;color:var(--gold)}
-  .logo .lg-txt span{display:block;font-size:10.5px;letter-spacing:2.2px;text-transform:uppercase;color:#9fb3cc;margin-top:6px;font-weight:700}
-  @keyframes lgDraw{to{stroke-dashoffset:0}}
-  @keyframes lgPop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
-  @keyframes lgPulse{0%,100%{opacity:1}50%{opacity:.55}}
-  @keyframes lgFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-6px)}}
-  @media (prefers-reduced-motion:reduce){.logo svg.lg,.logo .lg-c,.logo .lg-s,.logo .lg-n{animation:none;stroke-dashoffset:0;opacity:1}}
-  .tag{display:inline-flex;align-items:center;gap:8px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);padding:6px 12px;border-radius:999px;font-size:11px;letter-spacing:1.2px;text-transform:uppercase;color:#cfe0f5;margin-bottom:18px}
-  .tag i{color:var(--gold)}
-  h1{font-size:44px;line-height:1.08;font-weight:800;letter-spacing:-.5px;margin-bottom:14px}
-  h1 span{background:linear-gradient(90deg,var(--gold),var(--gold2));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .lead{color:#b8c9e0;font-size:15px;line-height:1.6;max-width:520px;margin-bottom:30px}
-  .chips{display:flex;flex-wrap:wrap;gap:10px}
-  .chip{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);backdrop-filter:blur(6px);padding:9px 14px;border-radius:12px;font-size:12.5px;color:#e6eef8;transition:all .2s}
-  .chip:hover{background:rgba(255,255,255,.12);transform:translateY(-2px)}
-  .chip i{color:var(--gold);font-size:15px}
-  .stats{display:flex;gap:28px;margin-top:34px}
-  .stat b{display:block;font-size:24px;font-weight:800;color:#fff}
-  .stat span{font-size:11px;color:#9fb3cc;letter-spacing:.8px;text-transform:uppercase}
-  /* card */
-  .card{position:relative;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.18);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px);border-radius:24px;padding:40px 38px;box-shadow:0 30px 80px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.25);animation:in .8s .15s ease both;max-width:440px;justify-self:end;width:100%}
-  .card::before{content:"";position:absolute;inset:-1px;border-radius:25px;padding:1px;background:linear-gradient(135deg,rgba(255,212,92,.6),transparent 40%,transparent 60%,rgba(34,184,207,.5));-webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude;pointer-events:none}
-  .card h2{font-size:24px;font-weight:800;margin-bottom:4px}
-  .card .sub{color:#b8c9e0;font-size:13px;margin-bottom:26px}
-  label{display:block;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#cfe0f5;margin-bottom:7px}
+  html,body{min-height:100%}
+  body{font-family:Inter,"Segoe UI",system-ui,sans-serif;font-size:14px;color:var(--ink);background:var(--bg);-webkit-font-smoothing:antialiased;overflow-x:hidden;
+       background-image:radial-gradient(900px 500px at 8% 0%,rgba(47,128,237,.10),transparent 60%),radial-gradient(700px 420px at 100% 100%,rgba(20,93,160,.10),transparent 60%)}
+  ::selection{background:rgba(47,128,237,.18)}
+
+  /* ---------- lienzo ---------- */
+  .stage{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:28px 20px}
+  .shell{width:100%;max-width:1300px;min-height:min(680px,calc(100vh - 56px));display:grid;grid-template-columns:58fr 42fr;background:var(--white);border-radius:var(--r);
+         box-shadow:0 40px 90px -30px rgba(7,28,54,.45),0 12px 30px -12px rgba(7,28,54,.18),0 0 0 1px rgba(7,28,54,.05);overflow:hidden;
+         animation:shellIn .6s var(--ease) both}
+  @keyframes shellIn{from{opacity:0;transform:translateY(16px) scale(.985)}to{opacity:1;transform:none}}
+
+  /* ---------- panel izquierdo: identidad ---------- */
+  .brand-panel{position:relative;background:linear-gradient(160deg,#0B2A52 0%,var(--navy) 55%,#04122A 100%);color:#fff;padding:44px 48px;display:flex;flex-direction:column;overflow:hidden;isolation:isolate}
+  .brand-panel::before{content:"";position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.05) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.05) 1px,transparent 1px);background-size:40px 40px;
+        mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 20%,transparent 100%);-webkit-mask-image:radial-gradient(ellipse 80% 70% at 50% 40%,#000 20%,transparent 100%);z-index:-1}
+  .glow{position:absolute;border-radius:50%;filter:blur(60px);z-index:-1;pointer-events:none;animation:drift 16s ease-in-out infinite}
+  .glow.a{width:420px;height:420px;background:rgba(47,128,237,.42);top:-160px;right:-120px}
+  .glow.b{width:360px;height:360px;background:rgba(20,93,160,.45);bottom:-160px;left:-120px;animation-delay:-7s}
+  .glow.c{width:180px;height:180px;background:rgba(245,183,0,.16);top:46%;left:52%;animation-delay:-3s}
+  @keyframes drift{0%,100%{transform:translate(0,0)}50%{transform:translate(22px,-18px)}}
+
+  .brand-top{display:flex;align-items:center;gap:14px;animation:fadeUp .6s .15s var(--ease) both}
+  .brand-top .logo{width:56px;height:56px;flex-shrink:0;filter:drop-shadow(0 12px 24px rgba(0,0,0,.35))}
+  .brand-top b{display:block;font-size:22px;font-weight:800;letter-spacing:-.4px;line-height:1}
+  .brand-top b i{font-style:normal;color:var(--gold)}
+  .brand-top span{display:block;font-size:12px;color:#A9BBD3;margin-top:5px;font-weight:500;letter-spacing:.3px}
+
+  .hero{margin-top:auto;padding-top:40px;animation:fadeUp .6s .3s var(--ease) both}
+  .hero h1{font-size:clamp(26px,2.6vw,36px);font-weight:800;line-height:1.15;letter-spacing:-.6px;max-width:520px}
+  .hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--electric-2),#9CCBFF);-webkit-background-clip:text;background-clip:text;color:transparent}
+  .hero p{color:#B7C6DA;font-size:14.5px;line-height:1.6;max-width:480px;margin-top:14px}
+
+  /* diagrama de procesos conectados */
+  .flow{margin-top:30px;animation:fadeUp .6s .45s var(--ease) both}
+  .flow svg{width:100%;max-width:560px;height:auto;display:block;overflow:visible}
+  .flow .lk{stroke:rgba(255,255,255,.22);stroke-width:1.5;fill:none;stroke-dasharray:4 6;animation:dash 6s linear infinite}
+  .flow .lk.hi{stroke:rgba(94,168,255,.75);stroke-dasharray:80 300;animation:run 5s linear infinite}
+  @keyframes dash{to{stroke-dashoffset:-100}}
+  @keyframes run{to{stroke-dashoffset:-380}}
+  .flow .node rect{fill:rgba(255,255,255,.06);stroke:rgba(255,255,255,.16);stroke-width:1;rx:12}
+  .flow .node.core rect{fill:rgba(47,128,237,.28);stroke:rgba(94,168,255,.6)}
+  .flow .node text{font-family:Inter,sans-serif;font-size:12.5px;font-weight:600;fill:#EAF1FA}
+  .flow .node .ic{fill:none;stroke:var(--electric-2);stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+  .flow .node.core .ic{stroke:#fff}
+  .flow .dot{fill:var(--gold)}
+  .flow .pulse{fill:none;stroke:var(--gold);stroke-width:1.5;opacity:0;transform-box:fill-box;transform-origin:center;animation:pulse 3s ease-out infinite}
+  @keyframes pulse{0%{transform:scale(.4);opacity:.9}100%{transform:scale(2.2);opacity:0}}
+
+  .stats{display:flex;gap:10px;margin-top:30px;flex-wrap:wrap;animation:fadeUp .6s .6s var(--ease) both}
+  .stat{flex:1;min-width:130px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.12);border-radius:14px;padding:12px 14px;backdrop-filter:blur(6px)}
+  .stat b{display:block;font-size:20px;font-weight:800;letter-spacing:-.4px;line-height:1.1}
+  .stat span{display:block;font-size:11px;color:#A9BBD3;text-transform:uppercase;letter-spacing:.9px;font-weight:600;margin-top:4px}
+  .org{margin-top:22px;font-size:11.5px;color:#8FA3BF;display:flex;align-items:center;gap:8px;animation:fadeUp .6s .7s var(--ease) both}
+  .org i{color:var(--gold);font-size:13px}
+
+  /* ---------- panel derecho: acceso ---------- */
+  .auth{background:linear-gradient(180deg,#FFFFFF 0%,#F8FAFD 100%);padding:44px 52px;display:flex;flex-direction:column;justify-content:center;animation:fadeUp .6s .25s var(--ease) both}
+  .auth .tag{display:inline-flex;align-items:center;gap:8px;font-size:11px;font-weight:700;letter-spacing:1.4px;text-transform:uppercase;color:var(--corp);background:#E8F1FB;padding:6px 12px;border-radius:999px;align-self:flex-start}
+  .auth .tag::before{content:"";width:6px;height:6px;border-radius:50%;background:var(--electric)}
+  .auth h2{font-size:26px;font-weight:800;letter-spacing:-.5px;margin-top:20px;color:var(--navy)}
+  .auth .sub{color:var(--muted);font-size:14px;margin-top:6px;margin-bottom:28px}
+
+  label{display:block;font-size:12.5px;font-weight:600;color:var(--ink);margin-bottom:7px}
   .field{position:relative;margin-bottom:16px}
-  .field i.ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#9fb3cc;font-size:16px;transition:color .2s}
-  .field input{width:100%;background:rgba(6,26,53,.55);border:1px solid rgba(255,255,255,.16);color:#fff;border-radius:12px;padding:13px 44px 13px 42px;font-family:Tahoma;font-size:14px;outline:none;transition:all .2s}
-  .field input::placeholder{color:#7f93ad}
-  .field input:focus{border-color:var(--gold);box-shadow:0 0 0 4px rgba(245,179,1,.18);background:rgba(6,26,53,.75)}
-  .field input:focus + i.ic, .field:focus-within i.ic{color:var(--gold)}
-  .eye{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:0;color:#9fb3cc;cursor:pointer;font-size:16px;padding:4px}
-  .eye:hover{color:#fff}
-  .btn{width:100%;margin-top:6px;padding:14px;border:0;border-radius:12px;font-family:Tahoma;font-weight:800;font-size:14px;letter-spacing:.4px;color:var(--ink);cursor:pointer;background:linear-gradient(90deg,#e6a600,var(--gold) 50%,var(--gold2));background-size:200% 100%;box-shadow:0 10px 28px rgba(245,179,1,.35);transition:all .25s}
-  .btn:hover{background-position:100% 0;transform:translateY(-2px);box-shadow:0 16px 36px rgba(245,179,1,.45)}
+  .field .ic{position:absolute;left:14px;top:50%;transform:translateY(-50%);color:#8E9BAE;font-size:17px;transition:color var(--t);pointer-events:none}
+  .field input{width:100%;height:50px;border:1.5px solid var(--line-2);background:#fff;border-radius:13px;padding:0 46px 0 44px;font-family:inherit;font-size:15px;color:var(--ink);outline:none;transition:border-color var(--t),box-shadow var(--t),background var(--t)}
+  .field input::placeholder{color:#A4AFBF}
+  .field input:hover{border-color:#AEBBCC}
+  .field input:focus{border-color:var(--electric);box-shadow:0 0 0 4px rgba(47,128,237,.16)}
+  .field:focus-within .ic{color:var(--electric)}
+  .eye{position:absolute;right:8px;top:50%;transform:translateY(-50%);width:36px;height:36px;border:0;border-radius:9px;background:transparent;color:#8E9BAE;cursor:pointer;font-size:17px;display:flex;align-items:center;justify-content:center;transition:background var(--t),color var(--t)}
+  .eye:hover{background:#EEF3F9;color:var(--corp)}
+  .eye:focus-visible{outline:2px solid var(--electric);outline-offset:2px}
+
+  .row{display:flex;align-items:center;justify-content:space-between;margin:2px 0 20px;font-size:13px}
+  .remember{display:inline-flex;align-items:center;gap:9px;color:var(--muted);cursor:pointer;user-select:none;margin:0;font-weight:500}
+  .remember input{appearance:none;-webkit-appearance:none;width:18px;height:18px;border:1.5px solid var(--line-2);border-radius:6px;background:#fff;display:grid;place-content:center;cursor:pointer;transition:all var(--t)}
+  .remember input::before{content:"";width:10px;height:10px;border-radius:3px;background:var(--electric);transform:scale(0);transition:transform var(--t)}
+  .remember input:checked{border-color:var(--electric)}
+  .remember input:checked::before{transform:scale(1)}
+  .remember input:focus-visible{outline:2px solid var(--electric);outline-offset:2px}
+  .secure{display:inline-flex;align-items:center;gap:6px;color:var(--green);font-weight:600;font-size:12.5px}
+
+  .btn{position:relative;width:100%;height:52px;border:0;border-radius:13px;font-family:inherit;font-weight:700;font-size:15px;color:#fff;cursor:pointer;
+       background:linear-gradient(90deg,var(--corp),var(--electric));box-shadow:0 10px 24px -8px rgba(47,128,237,.6);display:flex;align-items:center;justify-content:center;gap:10px;
+       transition:transform var(--t),box-shadow var(--t),filter var(--t)}
+  .btn::after{content:"";position:absolute;left:14px;right:14px;bottom:0;height:2px;border-radius:2px;background:var(--gold);opacity:0;transform:scaleX(.3);transition:all var(--t)}
+  .btn:hover{transform:translateY(-1px);box-shadow:0 16px 30px -10px rgba(47,128,237,.7);filter:brightness(1.04)}
+  .btn:hover::after{opacity:1;transform:scaleX(1)}
   .btn:active{transform:translateY(0)}
-  .btn.loading{opacity:.7;pointer-events:none}
-  .err{color:#ff8a80;font-size:12.5px;margin-top:12px;min-height:18px;display:flex;align-items:center;gap:6px}
-  .foot{margin-top:24px;padding-top:18px;border-top:1px solid rgba(255,255,255,.12);display:flex;justify-content:space-between;align-items:center;font-size:11px;color:#9fb3cc}
-  .foot .lock{display:flex;align-items:center;gap:6px}
-  .foot .lock i{color:#3ccf7a}
-  .copy{position:absolute;bottom:18px;left:0;right:0;text-align:center;font-size:11px;color:#7f93ad;letter-spacing:.6px}
-  @keyframes in{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-  @media (max-width:980px){
-    body{overflow:auto;overflow-x:hidden}
-    .wrap{grid-template-columns:1fr;padding:40px 20px 70px;gap:26px;align-content:start}
-    h1{font-size:30px}.lead{font-size:14px}.stats{display:none}.card{justify-self:center;padding:30px 24px}.copy{position:static;margin-top:20px}
+  .btn:focus-visible{outline:3px solid rgba(47,128,237,.4);outline-offset:3px}
+  .btn .spin{display:none;width:18px;height:18px;border:2.5px solid rgba(255,255,255,.35);border-top-color:#fff;border-radius:50%;animation:rot .7s linear infinite}
+  .btn.loading{pointer-events:none;filter:saturate(.85)}
+  .btn.loading .spin{display:inline-block}.btn.loading .bi{display:none}
+  @keyframes rot{to{transform:rotate(360deg)}}
+
+  .err{margin-top:14px;min-height:0;font-size:13px;color:#A32D2D;display:flex;align-items:flex-start;gap:8px;line-height:1.4}
+  .err:not(:empty){background:var(--err-bg);border:1px solid #F5C6C6;border-radius:10px;padding:10px 12px;animation:fadeUp .25s var(--ease) both}
+  .err i{color:var(--err);font-size:15px;margin-top:1px}
+
+  .foot{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:12px;color:var(--muted);flex-wrap:wrap}
+  .foot .ver{display:inline-flex;align-items:center;gap:6px;background:#EEF3F9;color:var(--corp);font-weight:600;padding:4px 10px;border-radius:999px;font-size:11.5px}
+  .copy{text-align:center;font-size:11.5px;color:#8FA3BF;margin-top:16px;letter-spacing:.2px}
+
+  @keyframes fadeUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+
+  /* ---------- logo: animación de entrada ---------- */
+  .logo .lg-c{stroke-dasharray:100;stroke-dashoffset:100;animation:draw 1s .25s cubic-bezier(.4,0,.2,1) forwards}
+  .logo .lg-s{stroke-dasharray:60;stroke-dashoffset:60;animation:draw .8s .8s cubic-bezier(.4,0,.2,1) forwards}
+  .logo .lg-bar{stroke-dasharray:40;stroke-dashoffset:40;animation:draw .5s 1.3s cubic-bezier(.4,0,.2,1) forwards}
+  .logo .lg-n{opacity:0;transform-box:fill-box;transform-origin:center;animation:pop .45s 1.6s cubic-bezier(.3,1.5,.5,1) forwards}
+  .logo .lg-n + .lg-n{animation-delay:1.75s}
+  @keyframes draw{to{stroke-dashoffset:0}}
+  @keyframes pop{from{opacity:0;transform:scale(0)}to{opacity:1;transform:scale(1)}}
+
+  /* ---------- responsive ---------- */
+  @media (max-width:1080px){
+    .brand-panel{padding:36px 34px}.auth{padding:36px 34px}
+    .hero p{font-size:14px}.flow svg{max-width:460px}
+  }
+  @media (max-width:900px){
+    .stage{padding:16px 12px;align-items:flex-start}
+    .shell{grid-template-columns:1fr;min-height:0;border-radius:22px}
+    .brand-panel{padding:22px 22px 24px;flex-direction:row;align-items:center;gap:14px}
+    .brand-panel::before{background-size:32px 32px}
+    .brand-top .logo{width:48px;height:48px}.brand-top b{font-size:19px}
+    .hero,.flow,.stats,.org{display:none}
+    .auth{padding:28px 22px 24px;justify-content:flex-start}
+    .auth h2{font-size:23px;margin-top:16px}.auth .sub{margin-bottom:22px}
+    .field input,.btn{height:50px}
+    .foot{margin-top:22px}
+  }
+  @media (max-width:420px){
+    .auth{padding:24px 18px 22px}
+    .row{flex-direction:column;align-items:flex-start;gap:10px}
+  }
+  @media (prefers-reduced-motion:reduce){
+    *,*::before,*::after{animation:none!important;transition:none!important}
+    .logo .lg-c,.logo .lg-s,.logo .lg-bar{stroke-dashoffset:0}.logo .lg-n{opacity:1}
   }
 </style>
 </head>
 <body>
-<div class="orb o1"></div><div class="orb o2"></div><div class="orb o3"></div>
-<div class="grid"></div>
 
-<div class="wrap">
-  <section class="brand">
-    <div class="logo">
-      <svg class="lg" viewBox="0 0 64 64" aria-label="CESES / SPL">
-        <defs>
-          <linearGradient id="lgBg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#1b4c92"/><stop offset="1" stop-color="#071b3c"/></linearGradient>
-          <linearGradient id="lgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5eaaff"/><stop offset="1" stop-color="#1f6fe8"/></linearGradient>
-        </defs>
-        <rect width="64" height="64" rx="16" fill="url(#lgBg)"/>
-        <rect x="1" y="1" width="62" height="62" rx="15" fill="none" stroke="#fff" stroke-opacity=".18"/>
-        <path class="lg-c" d="M45 18.5A18 18 0 1 0 45 45.5" fill="none" stroke="url(#lgC)" stroke-width="6" stroke-linecap="round"/>
-        <path class="lg-s" d="M40 24C26 24 26 32 32.5 32S39 40 25 40" fill="none" stroke="#fff" stroke-width="4.5" stroke-linecap="round"/>
-        <circle class="lg-n" cx="40" cy="24" r="3.6" fill="#f5b301"/>
-        <circle class="lg-n" cx="25" cy="40" r="3.6" fill="#f5b301"/>
-      </svg>
-      <div class="lg-txt"><b>CESES <i>/</i> SPL</b><span>Relaciones Laborales</span></div>
-    </div>
-    <div class="tag"><i class="bi bi-stars"></i> Unifrutti Perú · Relaciones Laborales</div>
-    <h1>Programación de<br><span>Ceses / SPL</span></h1>
-    <p class="lead">Plataforma para gestionar finiquitos, suspensiones y sin efecto del personal obrero de VERFRUT y RAPEL, con validación automática de reglas laborales y resumen listo para enviar.</p>
-    <div class="chips">
-      <div class="chip"><i class="bi bi-shield-check"></i> Control de indeterminados</div>
-      <div class="chip"><i class="bi bi-lightning-charge-fill"></i> Registro masivo con alertas</div>
-      <div class="chip"><i class="bi bi-table"></i> Tabla dinámica por Fecha Doc.</div>
-      <div class="chip"><i class="bi bi-envelope-paper-fill"></i> Correo + Excel adjunto</div>
-      <div class="chip"><i class="bi bi-database-fill-check"></i> Bases SQL VERFRUT / RAPEL</div>
-    </div>
-    <div class="stats">
-      <div class="stat"><b id="stTrab">—</b><span>Trabajadores</span></div>
-      <div class="stat"><b id="stReg">—</b><span>Registros históricos</span></div>
-      <div class="stat"><b>2</b><span>Empresas</span></div>
-    </div>
-  </section>
+<div class="stage">
+  <main class="shell" role="main">
 
-  <form class="card" id="f" autocomplete="on">
-    <h2>Bienvenido 👋</h2>
-    <div class="sub">Ingresa con tu usuario del sistema</div>
-    <label for="u">Usuario</label>
-    <div class="field"><i class="bi bi-person-fill ic"></i><input id="u" placeholder="tu.usuario" autocomplete="username" required autofocus></div>
-    <label for="p">Clave</label>
-    <div class="field"><i class="bi bi-lock-fill ic"></i><input id="p" type="password" placeholder="••••••••" autocomplete="current-password" required>
-      <button type="button" class="eye" id="eye" title="Mostrar / ocultar"><i class="bi bi-eye"></i></button></div>
-    <button class="btn" id="btn"><i class="bi bi-box-arrow-in-right"></i> Ingresar al sistema</button>
-    <div id="err" class="err"></div>
-    <div class="foot"><span class="lock"><i class="bi bi-shield-lock-fill"></i> Acceso protegido</span><span>CESES / SPL Web · v2.0</span></div>
-  </form>
+    <!-- ================= PANEL IZQUIERDO: IDENTIDAD ================= -->
+    <section class="brand-panel" aria-label="Presentación del sistema">
+      <div class="glow a"></div><div class="glow b"></div><div class="glow c"></div>
+
+      <div class="brand-top">
+        <!-- Isotipo CESES / SPL · versión completa (C + S + barra diagonal + nodos) -->
+        <svg class="logo" viewBox="0 0 64 64" role="img" aria-label="Logotipo CESES / SPL">
+          <defs>
+            <linearGradient id="lgC" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#5EA8FF"/><stop offset="1" stop-color="#2F80ED"/></linearGradient>
+            <linearGradient id="lgB" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2F80ED"/><stop offset="1" stop-color="#145DA0"/></linearGradient>
+          </defs>
+          <path class="lg-c" d="M40 17.2A19 19 0 1 0 40 46.8" fill="none" stroke="url(#lgC)" stroke-width="6.5" stroke-linecap="round"/>
+          <path class="lg-s" d="M39 23C29 23 29 32 34 32S39 41 29 41" fill="none" stroke="#FFFFFF" stroke-width="4.2" stroke-linecap="round"/>
+          <path class="lg-bar" d="M53 17L45 47" fill="none" stroke="url(#lgB)" stroke-width="5" stroke-linecap="round"/>
+          <circle class="lg-n" cx="39" cy="23" r="3.3" fill="#F5B700"/>
+          <circle class="lg-n" cx="29" cy="41" r="3.3" fill="#F5B700"/>
+        </svg>
+        <div><b>CESES <i>/</i> SPL</b><span>Plataforma de Relaciones Laborales</span></div>
+      </div>
+
+      <div class="hero">
+        <h1>Gestión laboral <em>clara, segura y conectada.</em></h1>
+        <p>Programación de finiquitos y suspensiones, control de retornos y alertas laborales del personal de campo, con validación automática de reglas y reportes listos para enviar.</p>
+      </div>
+
+      <div class="flow" aria-hidden="true">
+        <svg viewBox="0 0 560 210">
+          <path class="lk" d="M194 105C176 105 182 42 176 42"/>
+          <path class="lk" d="M194 105C176 105 182 168 176 168"/>
+          <path class="lk" d="M366 105C384 105 378 42 384 42"/>
+          <path class="lk" d="M366 105C384 105 378 168 384 168"/>
+          <path class="lk" d="M366 105L456 105"/>
+          <path class="lk hi" d="M176 42C182 42 176 105 194 105M366 105C384 105 378 168 384 168"/>
+          <path class="lk hi" d="M384 42C378 42 384 105 366 105L456 105" style="animation-delay:-2.5s"/>
+          <g class="node core" transform="translate(194 79)">
+            <rect width="172" height="52"/>
+            <path class="ic" d="M26 18h20M26 24h20M26 30h12"/>
+            <path class="ic" d="M42 30l3 3 6-6"/>
+            <text x="58" y="31">Programaciones</text>
+          </g>
+          <g class="node" transform="translate(40 18)">
+            <rect width="136" height="48"/>
+            <path class="ic" d="M16 14v22h24V14zM22 20h12M22 25h12M22 30h7"/>
+            <text x="50" y="29">Finiquitos</text>
+          </g>
+          <g class="node" transform="translate(40 144)">
+            <rect width="136" height="48"/>
+            <path class="ic" d="M22 15v18M32 15v18"/>
+            <text x="50" y="29">Suspensiones</text>
+          </g>
+          <g class="node" transform="translate(384 18)">
+            <rect width="140" height="48"/>
+            <path class="ic" d="M21 31a9 9 0 1 1 6-15M25 13l4 4-4 4"/>
+            <text x="50" y="29">Retornos</text>
+          </g>
+          <g class="node" transform="translate(384 144)">
+            <rect width="140" height="48"/>
+            <path class="ic" d="M21 13l9 16H12zM21 20v5M21 27v1"/>
+            <text x="50" y="29">Alertas</text>
+          </g>
+          <g class="node" transform="translate(456 82)">
+            <rect width="92" height="46"/>
+            <path class="ic" d="M19 25a6 6 0 1 1 0-12 6 6 0 0 1 0 12zM8 34c0-6 5-8 11-8s11 2 11 8"/>
+            <text x="42" y="28">Personal</text>
+          </g>
+          <circle class="pulse" cx="366" cy="105" r="8"/>
+          <circle class="dot" cx="366" cy="105" r="4.5"/>
+          <circle class="dot" cx="194" cy="105" r="3.5"/>
+          <circle class="dot" cx="176" cy="42" r="3"/>
+          <circle class="dot" cx="384" cy="168" r="3"/>
+        </svg>
+      </div>
+
+      <div class="stats" aria-label="Indicadores del sistema">
+        <div class="stat"><b id="stTrab">—</b><span>Trabajadores</span></div>
+        <div class="stat"><b id="stReg">—</b><span>Registros</span></div>
+        <div class="stat"><b>2</b><span>Empresas</span></div>
+      </div>
+      <div class="org"><i class="bi bi-buildings-fill"></i> Entorno: Unifrutti Perú · VERFRUT · RAPEL</div>
+    </section>
+
+    <!-- ================= PANEL DERECHO: ACCESO ================= -->
+    <section class="auth" aria-labelledby="tit">
+      <span class="tag">Acceso corporativo</span>
+      <h2 id="tit">Bienvenido nuevamente</h2>
+      <p class="sub">Ingresa tus credenciales para continuar.</p>
+
+      <form id="f" autocomplete="on" novalidate>
+        <label for="u">Usuario</label>
+        <div class="field">
+          <i class="bi bi-person-fill ic" aria-hidden="true"></i>
+          <input id="u" name="username" placeholder="tu.usuario" autocomplete="username" required autofocus autocapitalize="none" spellcheck="false" aria-describedby="err">
+        </div>
+
+        <label for="p">Contraseña</label>
+        <div class="field">
+          <i class="bi bi-lock-fill ic" aria-hidden="true"></i>
+          <input id="p" name="password" type="password" placeholder="••••••••" autocomplete="current-password" required aria-describedby="err">
+          <button type="button" class="eye" id="eye" title="Mostrar u ocultar contraseña" aria-label="Mostrar u ocultar contraseña"><i class="bi bi-eye"></i></button>
+        </div>
+
+        <div class="row">
+          <label class="remember" for="rec"><input type="checkbox" id="rec"> Recordar usuario</label>
+          <span class="secure"><i class="bi bi-shield-lock-fill"></i> Conexión protegida</span>
+        </div>
+
+        <button class="btn" id="btn" type="submit"><span class="spin" aria-hidden="true"></span><i class="bi bi-box-arrow-in-right"></i> Ingresar al sistema</button>
+        <div id="err" class="err" role="alert" aria-live="polite"></div>
+      </form>
+
+      <div class="foot">
+        <span>Relaciones Laborales · Unifrutti Perú</span>
+        <span class="ver"><i class="bi bi-patch-check-fill"></i> CESES / SPL Web · v2.2</span>
+      </div>
+      <div class="copy">© <span id="anio"></span> Unifrutti Perú · Desarrollado por Joel Timoteo</div>
+    </section>
+
+  </main>
 </div>
-<div class="copy">© <span id="anio"></span> UNIFRUTTI PERÚ · RELACIONES LABORALES · DESARROLLADO POR JOEL TIMOTEO</div>
 
+<!-- ===== Lógica de autenticación (sin cambios) ===== -->
 <script>
   anio.textContent = new Date().getFullYear();
   eye.onclick = () => { const t = p.type === 'password'; p.type = t ? 'text' : 'password'; eye.firstElementChild.className = t ? 'bi bi-eye-slash' : 'bi bi-eye'; };
@@ -152,6 +306,14 @@
     } catch { err.innerHTML = '<i class="bi bi-exclamation-circle"></i> No se pudo conectar con el servidor'; }
     btn.classList.remove('loading');
   };
+</script>
+<!-- ===== Recordar usuario: solo rellena el campo, no toca la autenticación ===== -->
+<script>
+  try {
+    const guardado = localStorage.getItem('ceses_usuario');
+    if (guardado) { u.value = guardado; rec.checked = true; p.focus(); }
+    f.addEventListener('submit', () => { try { if (rec.checked) localStorage.setItem('ceses_usuario', u.value.trim()); else localStorage.removeItem('ceses_usuario'); } catch {} });
+  } catch {}
 </script>
 </body>
 </html>
