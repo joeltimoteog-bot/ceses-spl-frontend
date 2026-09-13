@@ -300,7 +300,7 @@
   f.onsubmit = async e => {
     e.preventDefault(); err.textContent = ''; btn.classList.add('loading');
     try {
-      const r = await post({ action: 'login', usuario: u.value.trim(), clave: p.value });
+      const r = await post({ action: 'login', usuario: u.value.trim(), clave: p.value, dispositivo: navigator.userAgent });
       if (r.ok) { localStorage.setItem('ceses_token', r.token); location.href = 'app.html'; return; }
       err.innerHTML = '<i class="bi bi-exclamation-circle"></i> ' + (r.error || 'Error');
     } catch { err.innerHTML = '<i class="bi bi-exclamation-circle"></i> No se pudo conectar con el servidor'; }
