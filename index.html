@@ -311,6 +311,8 @@
 
 <!-- ===== Marca (solo presentación) ===== -->
 <script>
+  // salida explícita: garantiza que no quede token (evita el auto-ingreso)
+  if (/[?&]salir=1/.test(location.search)) { try { localStorage.removeItem('ceses_token'); } catch (e) {} history.replaceState(null, '', location.pathname); }
   (function(){ const B = window.BRAND_CONFIG || {}; try { document.title = B.brandName + ' · ' + B.platformName; if (B.version) verTxt.textContent = B.version; if (B.copyright) copyTxt.innerHTML = B.copyright.replace('2026', '<span id="anio">2026</span>'); } catch(e){} })();
   function abrirLegal(t){ const B = window.BRAND_CONFIG || {}, A = B.about || {}; const url = t === 'privacidad' ? A.privacyUrl : A.termsUrl;
     if (url) { window.open(url, '_blank'); return; }

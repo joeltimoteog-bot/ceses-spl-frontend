@@ -90,7 +90,13 @@ function abrirMenu() { $('#sidebar').classList.add('open'); $('#backdrop').class
 function cerrarMenu() { $('#sidebar').classList.remove('open'); $('#backdrop').classList.remove('show'); }
 function toggleSidebar() { const mini = document.body.classList.toggle('sb-mini'); try { localStorage.setItem('ceses_sb', mini ? '1' : '0'); } catch {} }
 try { if (localStorage.getItem('ceses_sb') === '1') document.body.classList.add('sb-mini'); } catch {}
-async function salir() { try { await gas('logout'); } catch {} try { localStorage.removeItem(TOKEN_KEY); } catch {} location.href = 'index.html'; }
+function salir() {
+  const t = token();
+  try { localStorage.removeItem(TOKEN_KEY); } catch {}
+  // cierre en el backend en segundo plano (no bloquea la salida)
+  try { fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'logout', token: t }), keepalive: true }).catch(() => {}); } catch {}
+  location.replace('index.html?salir=1');
+}
 
 // ---------- inicio ----------
 async function cargarInicio() {
