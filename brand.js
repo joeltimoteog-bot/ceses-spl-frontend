@@ -36,8 +36,8 @@ window.BRAND_CONFIG = {
    sobreescribir los nombres visibles desde la pestaña `config` de la hoja
    (claves ORG_VERFRUT, ORG_RAPEL); esos valores llegan en el login. */
 window.ORGANIZATION_DISPLAY = {
-  VERFRUT: 'Organización 01',
-  RAPEL: 'Organización 02',
+  VERFRUT: 'VERFRUT',
+  RAPEL: 'RAPEL',
 };
 
 window.LOGO_ASSETS = {

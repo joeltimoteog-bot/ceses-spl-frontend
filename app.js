@@ -82,12 +82,13 @@ const TITULOS = {
   dni: ['Buscar trabajador', 'Ficha del trabajador, antigüedad e historial'],
   registro: ['Registro masivo', 'Suspensiones, finiquitos y sin efecto por lote'],
   resumen: ['Programaciones', 'Lo programado por sector, firmas y correo'],
+  retornos: ['Retornos', 'Rutas por retornar, alertas a sectores y estadísticas'],
   responsables: ['Responsables', 'Analista y supervisor por fundo'],
   panel: ['Panel de Control', 'Usuarios, roles, permisos, auditoría y sesiones'],
   denegado: ['Acceso denegado', 'No cuentas con autorización para este módulo'],
 };
 // permiso que exige cada módulo (el backend lo vuelve a validar en cada acción)
-const PERM_MODULO = { inicio: 'inicio.ver', dni: 'buscar_trabajador.ver', registro: 'registro_masivo.ver', resumen: 'programaciones.ver', responsables: 'responsables.ver', panel: 'panel.ver' };
+const PERM_MODULO = { inicio: 'inicio.ver', dni: 'buscar_trabajador.ver', registro: 'registro_masivo.ver', resumen: 'programaciones.ver', retornos: 'programaciones.ver', responsables: 'responsables.ver', panel: 'panel.ver' };
 let yoAct = null, PERM = {};
 function puede(p) { return !!PERM[p]; }
 function primerModulo() { return Object.keys(PERM_MODULO).find(m => puede(PERM_MODULO[m])) || 'denegado'; }
@@ -106,6 +107,7 @@ function ir(p) {
   window.scrollTo({ top: 0 });
   if (p === 'inicio') cargarInicio();
   if (p === 'responsables') cargarResp();
+  if (p === 'retornos') cargarRetornos();
   if (p === 'registro') cargarCatalogos();
   if (p === 'panel') cargarPanel();
 }
@@ -143,6 +145,7 @@ async function cargarInicio() {
   }).join('');
   try { alertasAct = r0.alertas; pintarAlertasTiles(alertasAct); } catch (e2) { $('#alGrid').innerHTML = `<div class="empty text-danger">${esc(e2.message)}</div>`; }
   const f = r0.fechas;
+  pintarRetornosInicio(r0.retornos);
   $('#tFechas tbody').innerHTML = f.slice(0, 5).map(x => `<tr><td><b>${dmy(x.fecha_doc)}</b></td><td>${x.n}</td><td>${x.fin}</td><td>${x.sus}</td><td class="text-end"><button class="btn-ico" title="Ver programación" onclick="verFecha('${x.fecha_doc}')"><i class="bi bi-arrow-right"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin programaciones registradas</td></tr>';
 }
 async function subirExcel(inp) {
@@ -846,3 +849,69 @@ const nItem = a => `<div class="ni ${a.tipo}"><i class="bi ${a.tipo === 'danger'
   if (yo.debe_cambiar_clave) abrirMiClave(true);
   if (puede('panel.ver')) gas('panelResumen').then(r => { $('#notifDot').hidden = !(r.alertas || []).some(a => a.tipo === 'danger' || a.tipo === 'warning'); }).catch(() => {});
 })();
+
+// ---------- retornos y estadísticas (v3.5) ----------
+const CH = {};   // instancias Chart.js por canvas
+const COL = { navy: '#0b2e5b', blue: '#1f6fe8', blue2: '#5eaaff', gold: '#f5b301', danger: '#d63a3a', warn: '#e69a00', gris: '#8a97a8', ok: '#1f9d55' };
+function chart(id, cfg) {
+  const el = document.getElementById(id); if (!el || !window.Chart) return;
+  if (CH[id]) CH[id].destroy();
+  cfg.options = Object.assign({ responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }, cfg.options || {});
+  CH[id] = new Chart(el, cfg);
+}
+const orgChips = emp => Object.keys(emp || {}).map(e => `<span class="emp-tag">${esc(orgNombre(e))}${Object.keys(emp).length > 1 ? ' ' + emp[e] : ''}</span>`).join(' ');
+function pintarRetornosInicio(r) {
+  const box = $('#rtIni'); if (!box) return;
+  if (!r) { box.innerHTML = '<div class="empty">Sin información de retornos</div>'; return; }
+  $('#rtIniRango').textContent = `(${dmy(r.desde)} al ${dmy(r.hasta)})`;
+  if (!r.fechas.length) { box.innerHTML = `<div class="empty"><i class="bi bi-check2-circle"></i> Sin rutas por retornar en los próximos ${r.dias} día(s)</div>`; return; }
+  const chips = `<div class="d-flex flex-wrap gap-2 mb-2"><span class="stat-chip ok"><b>${r.resumen.personas}</b> personas</span><span class="stat-chip"><b>${r.resumen.rutas}</b> rutas</span><span class="stat-chip"><b>${r.resumen.fundos}</b> fundos / sectores</span></div>`;
+  box.innerHTML = chips + `<div class="table-wrap"><table class="table tbl compact"><thead><tr><th>Fecha retorno</th><th>Fundo / Sector</th><th>Rutas</th><th class="text-end">Personas</th></tr></thead><tbody>` +
+    r.fechas.map(F => F.fundos.map((S, i) => `<tr>${i === 0 ? `<td rowspan="${F.fundos.length}"><b>${dmy(F.fecha)}</b><div class="hint">${F.total} pers.</div></td>` : ''}<td><b>${esc(S.fundo)}</b></td><td class="text-wrap">${S.rutas.map(x => `${esc(x.ruta)} <span class="text-muted">(${x.cant})</span>`).join(', ')}</td><td class="text-end"><b>${S.total}</b></td></tr>`).join('')).join('') + '</tbody></table></div>';
+}
+let retAct = null;
+function rtParams() { const d = $('#rtDesde').value, n = Number($('#rtDias').value) || 3; return d ? { desde: d, dias: n } : { dias: n }; }
+async function cargarRetornos() {
+  const btn = $('#btnRetornos'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Consultando…';
+  $('#rtMsg').innerHTML = '';
+  try {
+    const p = rtParams(); p.detalle = puede('buscar_trabajador.ver');
+    const [r, st] = await Promise.all([gas('retornos', p), gas('estadisticas')]);
+    retAct = r; pintarRetornos(r); pintarEstadisticas(st);
+  } catch (e) { $('#rtMsg').innerHTML = `<div class="alert alert-danger py-2"><i class="bi bi-x-octagon-fill"></i> ${esc(e.message)}</div>`; }
+  btn.disabled = false; btn.innerHTML = '<i class="bi bi-search"></i> Consultar';
+}
+function pintarRetornos(r) {
+  $('#rtRango').textContent = `${dmy(r.desde)} al ${dmy(r.hasta)}`;
+  $('#rtKpis').innerHTML = [['Personas por retornar', r.resumen.personas, ''], ['Rutas', r.resumen.rutas, 'amb'], ['Fundos / sectores', r.resumen.fundos, 'gris'], ['Fechas de retorno', r.resumen.fechas, '']]
+    .map(([n, v, c]) => `<div class="col-6 col-md-3"><div class="kpi-mini ${c}"><div class="t">${n}</div><div class="n">${v}</div></div></div>`).join('');
+  const filas = [];
+  r.fechas.forEach(F => { F.fundos.forEach(S => S.rutas.forEach(x => filas.push(`<tr><td><b>${dmy(F.fecha)}</b></td><td><b>${esc(S.fundo)}</b></td><td>${esc(x.ruta)}</td><td>${esc(x.codigo)}</td><td>${dmy(x.fin_sl)}</td><td>${orgChips(x.empresas)}</td><td>${esc(x.estado_retorno)}</td><td class="text-end"><b>${x.cant}</b></td></tr>`)));
+    filas.push(`<tr class="table-light"><td colspan="7" class="text-end"><b>Total ${dmy(F.fecha)}</b></td><td class="text-end"><b>${F.total}</b></td></tr>`); });
+  $('#tRet tbody').innerHTML = filas.join('') || '<tr><td colspan="8" class="empty"><i class="bi bi-check2-circle"></i>Sin rutas por retornar en el rango</td></tr>';
+  const det = r.detalle || [];
+  $('#rtDetCount').textContent = det.length ? `(${det.length} registros)` : '';
+  $('#tRetDet tbody').innerHTML = det.map((x, i) => `<tr><td class="text-muted">${i + 1}</td><td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.fundo)}</td><td>${esc(x.ruta)}</td><td>${dmy(x.inicio_sl)}</td><td>${dmy(x.fin_sl)}</td><td><b>${dmy(x.retorno)}</b></td><td>${x.dias ?? ''}</td><td>${esc(x.estado_retorno)}</td></tr>`).join('') || '<tr><td colspan="11" class="empty">Sin detalle</td></tr>';
+  chart('chRetFecha', { type: 'bar', data: { labels: r.fechas.map(F => dmy(F.fecha)), datasets: [{ label: 'Personas', data: r.fechas.map(F => F.total), backgroundColor: COL.blue, borderRadius: 6 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+  chart('chRetFundo', { type: 'bar', data: { labels: r.por_fundo.map(f => f.fundo), datasets: [{ label: 'Personas', data: r.por_fundo.map(f => f.cant), backgroundColor: COL.gold, borderRadius: 6 }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
+}
+function pintarEstadisticas(st) {
+  $('#stRango').textContent = `semanas desde ${dmy(st.rango.semanas_desde)} · 30 días desde ${dmy(st.rango.dias30_desde)} · generado ${st.generado}`;
+  const ds = (src, key) => src.map(x => x[key]);
+  chart('chSemanas', { type: 'bar', data: { labels: st.semanas.map(s => 'Sem ' + dmy(s.semana).slice(0, 5)), datasets: [
+    { label: 'Finiquitos', data: ds(st.semanas, 'finiquitos'), backgroundColor: COL.danger, borderRadius: 4 },
+    { label: 'Suspensiones', data: ds(st.semanas, 'suspensiones'), backgroundColor: COL.warn, borderRadius: 4 },
+    { label: 'Sin efecto', data: ds(st.semanas, 'sin_efecto'), backgroundColor: COL.gris, borderRadius: 4 }] },
+    options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true, ticks: { precision: 0 } } } } });
+  chart('chRet14', { type: 'line', data: { labels: st.retornos14.map(x => dmy(x.fecha).slice(0, 5)), datasets: [{ label: 'Personas que retornan', data: ds(st.retornos14, 'cant'), borderColor: COL.blue, backgroundColor: 'rgba(31,111,232,.15)', fill: true, tension: .3, pointRadius: 3 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
+  chart('chFundos30', { type: 'bar', data: { labels: st.fundos30.map(f => f.fundo), datasets: [
+    { label: 'Finiquitos', data: ds(st.fundos30, 'finiquitos'), backgroundColor: COL.danger, borderRadius: 4 },
+    { label: 'Suspensiones', data: ds(st.fundos30, 'suspensiones'), backgroundColor: COL.warn, borderRadius: 4 }] },
+    options: { indexAxis: 'y', scales: { x: { stacked: true, beginAtZero: true, ticks: { precision: 0 } }, y: { stacked: true } } } });
+  chart('chEmp30', { type: 'doughnut', data: { labels: st.empresas30.map(e => orgNombre(e.empresa)), datasets: [{ data: st.empresas30.map(e => e.finiquitos + e.suspensiones + e.sin_efecto), backgroundColor: [COL.navy, COL.gold, COL.blue2, COL.gris] }] }, options: { cutout: '60%' } });
+}
+async function enviarRetornos(desdeInicio) {
+  const p = desdeInicio ? {} : rtParams();
+  const c = await confirmar({ titulo: 'Alertar rutas por retornar', msg: 'Se enviará por correo el resumen de rutas por retornar (cantidades por fecha, fundo y ruta) con el detalle nominal en Excel adjunto a los destinatarios configurados (RETORNOS_PARA o ALERTAS_PARA).', btn: 'Enviar' }); if (!c.ok) return;
+  try { const r = await gas('correoRetornos', p); toast(`Alerta de retornos enviada a ${esc(r.para)} · ${r.resumen.personas} persona(s) / ${r.resumen.rutas} ruta(s)`); } catch (e) { toast(e.message, 'err', 7000); }
+}
