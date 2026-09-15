@@ -1,4 +1,5 @@
 'use strict';
+const APP_VERSION = 'v3.6.1';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -287,7 +288,7 @@ async function grabar() {
       // la respuesta se perdió en la red (p. ej. 404 de la redirección de Google): verificar si el lote ya quedó grabado
       $('#rErr').textContent = 'La respuesta del servidor se perdió; verificando si el lote quedó grabado…';
       const est = await gas('loteEstado', datosLote());
-      if (!est.grabados) throw new Error('No se pudo grabar el lote (' + e.message + '). Vuelve a intentar: el sistema omite automáticamente los DNI que ya estén registrados.');
+      if (!est.grabados) throw new Error('No se pudo grabar el lote. Vuelve a intentar: el sistema omite automáticamente los DNI que ya estén registrados. [' + APP_VERSION + '] Detalle: ' + e.message.slice(0, 160));
       r = { grabados: est.grabados, duplicados: 0, excluidos: 0, alertasPorFundo: {}, verificado: true };
     }
     cacheClear('resumen:'); cacheClear('trab:');
