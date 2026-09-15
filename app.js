@@ -34,15 +34,19 @@ async function gas(action, data = {}) {
   else {
     try { j = await pedir_(payload, false); }
     catch (e) {
-      if (!(e.red && cabeGet)) throw e;
+      if (!(e.red && cabeGet) || action === 'grabar') throw e;   // grabar nunca se reintenta solo (evita ejecutar dos veces); el módulo verifica con loteEstado
       j = await pedir_(payload, true);            // POST bloqueado → reintento por GET
       usarModoGet(true); console.warn('TALVENIQ: POST bloqueado en esta red, usando modo compatible (GET).');
     }
   }
-  if (j && j.error === 'No autenticado') { try { localStorage.removeItem(TOKEN_KEY); } catch {} location.href = 'index.html'; throw new Error('sesión'); }
+  if (j && j.error === 'No autenticado') { try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem('ceses_yo'); } catch {} location.href = 'index.html'; throw new Error('sesión'); }
   if (j && j.error) throw new Error(orgTexto(j.error));
   return j;
 }
+// Caché en memoria de consultas recientes (3 min): repetir una búsqueda o una fecha ya consultada es instantáneo
+const MEM_ = new Map(), MEM_TTL_ = 180000;
+async function cacheGet(k, fn) { const c = MEM_.get(k); if (c && Date.now() - c.t < MEM_TTL_) return c.v; const v = await fn(); MEM_.set(k, { v, t: Date.now() }); return v; }
+function cacheClear(prefix) { [...MEM_.keys()].forEach(k => { if (!prefix || k.startsWith(prefix)) MEM_.delete(k); }); }
 // Traductor de las rutas antiguas (/api/...) a acciones del Apps Script
 async function api(url, opt = {}) {
   const m = (opt.method || 'GET').toUpperCase();
@@ -120,7 +124,7 @@ function toggleSidebar() { const mini = document.body.classList.toggle('sb-mini'
 try { if (localStorage.getItem('ceses_sb') === '1') document.body.classList.add('sb-mini'); } catch {}
 function salir() {
   const t = token();
-  try { localStorage.removeItem(TOKEN_KEY); } catch {}
+  try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem('ceses_yo'); } catch {}
   // cierre en el backend en segundo plano (no bloquea la salida)
   try { fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify({ action: 'logout', token: t }), keepalive: true }).catch(() => {}); } catch {}
   location.replace('index.html?salir=1');
@@ -172,7 +176,7 @@ async function buscarDNI() {
   if (!/^\d{6,12}$/.test(dni)) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> El DNI debe contener solo números'; return; }
   const btnB = $('#btnBuscar'); btnB.classList.add('loading'); btnB.disabled = true;
   try {
-    const t = await api('/api/trabajador/' + dni);
+    const t = await cacheGet('trab:' + dni, () => api('/api/trabajador/' + dni));
     const a = t.antiguedad;
     const estCls = t.estado === 'INDETERMINADO' ? 'danger' : t.estado === 'PERIODO DE PRUEBA' ? 'info' : '';
     const aviso = t.en_base ? '' : `<div class="alert alert-warning py-2 small mb-3"><i class="bi bi-exclamation-triangle-fill"></i> <b>No está en la base activa de las organizaciones</b> (cesado o no vigente). Último registro: ${badgeEst(t.ultimo_estatus)} ${dmy(t.ultimo_registro)}. Ficha tomada de su historial.</div>`;
@@ -276,8 +280,18 @@ async function grabar() {
   if (!confirm('¿Grabar el lote validado?')) return;
   $('#btnGrabar').disabled = true;
   try {
-    const r = await api('/api/programacion', { method: 'POST', body: JSON.stringify(datosLote()) });
-    let msg = `Grabados: ${r.grabados} · Excluidos (empleados): ${r.excluidos}`;
+    let r;
+    try { r = await api('/api/programacion', { method: 'POST', body: JSON.stringify(datosLote()) }); }
+    catch (e) {
+      if (!e.red) throw e;
+      // la respuesta se perdió en la red (p. ej. 404 de la redirección de Google): verificar si el lote ya quedó grabado
+      $('#rErr').textContent = 'La respuesta del servidor se perdió; verificando si el lote quedó grabado…';
+      const est = await gas('loteEstado', datosLote());
+      if (!est.grabados) throw new Error('No se pudo grabar el lote (' + e.message + '). Vuelve a intentar: el sistema omite automáticamente los DNI que ya estén registrados.');
+      r = { grabados: est.grabados, duplicados: 0, excluidos: 0, alertasPorFundo: {}, verificado: true };
+    }
+    cacheClear('resumen:'); cacheClear('trab:');
+    let msg = `Grabados: ${r.grabados}` + (r.duplicados ? ` · Ya registrados (omitidos): ${r.duplicados}` : '') + ` · Excluidos (empleados): ${r.excluidos}` + (r.verificado ? '\n(verificado tras un error de red: el lote quedó grabado correctamente)' : '');
     const al = Object.entries(r.alertasPorFundo);
     if (al.length) msg += '\n\nAlertas por fundo:\n' + al.map(([f, t]) => `  ${f}: ` + Object.entries(t).map(([k, n]) => `${k}=${n}`).join(', ')).join('\n');
     alert(msg);
@@ -302,7 +316,7 @@ async function cargarResumen() {
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-search"></i> Consultar'; }
 }
 async function cargarResumen_(q) {
-  const r = await api('/api/resumen?fechas=' + q);
+  const r = await cacheGet('resumen:' + q, () => api('/api/resumen?fechas=' + q));
   const t = r.totales;
   $('#sKpis').innerHTML = [['Registros', t.registros, ''], ['Finiquitos', t.finiquitos, 'rojo'], ['Suspensiones', t.suspensiones, 'amb'], ['Sin efecto', t.sin_efecto, 'gris'], ['Indeterminados', t.indeterminados, 'rojo'], ['Próximos', t.proximos, 'amb']]
     .map(([n, v, c]) => `<div class="col-6 col-md-2"><div class="kpi-mini ${c}"><div class="t">${n}</div><div class="n">${v}</div></div></div>`).join('');
@@ -377,7 +391,7 @@ async function guardarFirma(tr) {
 }
 async function eliminar(id) {
   if (!confirm('¿Eliminar este registro de la programación?')) return;
-  try { await api('/api/programacion/' + id, { method: 'DELETE' }); cargarResumen(); } catch (e) { alert(e.message); }
+  try { await api('/api/programacion/' + id, { method: 'DELETE' }); cacheClear('resumen:'); cacheClear('trab:'); cargarResumen(); } catch (e) { alert(e.message); }
 }
 function descargarExcel() {
   const f = fechasAct.length ? fechasAct : fechasSel();
@@ -839,8 +853,14 @@ const nItem = a => `<div class="ni ${a.tipo}"><i class="bi ${a.tipo === 'danger'
 
 // ---------- arranque ----------
 (async () => {
-  let yo; try { yo = await api('/api/yo'); } catch { return; }
-  if (!yo || !yo.usuario) { location.href = 'index.html'; return; }
+  let yo = null; try { const s = sessionStorage.getItem('ceses_yo'); if (s) yo = JSON.parse(s); } catch {}
+  const pYo = api('/api/yo').then(y => { try { sessionStorage.setItem('ceses_yo', JSON.stringify(y)); } catch {} return y; }).catch(() => null);
+  if (!yo || !yo.usuario) { yo = await pYo; if (!yo || !yo.usuario) { location.href = 'index.html'; return; } }
+  else pYo.then(y => {   // v3.6: entrada inmediata con la sesión del login; el backend la revalida en paralelo
+    if (!y) return;
+    if (!y.usuario) { try { sessionStorage.removeItem('ceses_yo'); } catch {} location.href = 'index.html'; return; }
+    yoAct = y; if (JSON.stringify(y.permisos) !== JSON.stringify(PERM)) { PERM = y.permisos || {}; aplicarPermisosUI(); }
+  });
   yoAct = yo; PERM = yo.permisos || {};
   if (yo.organizaciones) Object.assign(window.ORGANIZATION_DISPLAY, yo.organizaciones);   // alias configurados por el administrador (pestaña config)
   aplicarMarca();
@@ -850,7 +870,7 @@ const nItem = a => `<div class="ni ${a.tipo}"><i class="bi ${a.tipo === 'danger'
   const destino = location.hash.replace('#', '') || primerModulo();
   ir(destino);
   if (yo.debe_cambiar_clave) abrirMiClave(true);
-  if (puede('panel.ver')) gas('panelResumen').then(r => { $('#notifDot').hidden = !(r.alertas || []).some(a => a.tipo === 'danger' || a.tipo === 'warning'); }).catch(() => {});
+  if (puede('panel.ver')) setTimeout(() => gas('panelResumen').then(r => { $('#notifDot').hidden = !(r.alertas || []).some(a => a.tipo === 'danger' || a.tipo === 'warning'); }).catch(() => {}), 3000);
 })();
 
 // ---------- retornos y estadísticas (v3.5) ----------
