@@ -126,7 +126,8 @@ function salir() {
 
 // ---------- inicio ----------
 async function cargarInicio() {
-  const e = await api('/api/estado');
+  const r0 = await gas('inicio');   // v3.4: estado + fechas + alertas en un solo viaje
+  const e = r0.estado;
   const tot = e.trabajadores.reduce((s, t) => s + t.n, 0);
   $('#kpis').innerHTML = [
     ['Trabajadores en base', tot.toLocaleString('es-PE'), 'bi-people-fill', 'b'],
@@ -140,8 +141,8 @@ async function cargarInicio() {
     const est = s ? '<span class="st ok"><i class="bi bi-check-circle-fill"></i> Sincronizada</span>' : '<span class="st bad"><i class="bi bi-exclamation-circle-fill"></i> Sin sincronizar</span>';
     return `<tr><td><span class="emp-tag">${esc(orgNombre(emp))}</span></td><td><b>${t.n.toLocaleString('es-PE')}</b></td><td>${s ? esc(s.fecha) : '<span class="text-muted">nunca</span>'}</td><td>${est}</td></tr>`;
   }).join('');
-  cargarAlertas();
-  const f = await api('/api/programacion/fechas');
+  try { alertasAct = r0.alertas; pintarAlertasTiles(alertasAct); } catch (e2) { $('#alGrid').innerHTML = `<div class="empty text-danger">${esc(e2.message)}</div>`; }
+  const f = r0.fechas;
   $('#tFechas tbody').innerHTML = f.slice(0, 5).map(x => `<tr><td><b>${dmy(x.fecha_doc)}</b></td><td>${x.n}</td><td>${x.fin}</td><td>${x.sus}</td><td class="text-end"><button class="btn-ico" title="Ver programación" onclick="verFecha('${x.fecha_doc}')"><i class="bi bi-arrow-right"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin programaciones registradas</td></tr>';
 }
 async function subirExcel(inp) {
@@ -289,7 +290,7 @@ async function cargarResumen() {
   if (!fechasAct.length) { $('#sAlertas').innerHTML = '<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle-fill"></i> Ingresa al menos una Fecha Doc. válida (AAAA-MM-DD o DD/MM/AAAA), por ejemplo <b>2026-08-20</b>.</div>'; return; }
   const q = fechasAct.join(',');
   const btn = $('#btnConsultar'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Consultando…'; }
-  $('#sAlertas').innerHTML = `<div class="alert alert-light border py-2"><span class="spinner-border spinner-border-sm text-primary me-2"></span> Consultando ${fechasAct.map(dmy).join(', ')}… (puede tardar 5–10 s)</div>`;
+  $('#sAlertas').innerHTML = `<div class="alert alert-light border py-2"><span class="spinner-border spinner-border-sm text-primary me-2"></span> Consultando ${fechasAct.map(dmy).join(', ')}… (unos segundos)</div>`;
   try { await cargarResumen_(q); }
   catch (e) { $('#sAlertas').innerHTML = `<div class="alert alert-danger py-2"><i class="bi bi-x-octagon-fill"></i> <b>No se pudo cargar la consulta:</b> ${esc(e.message)}</div>`; console.error(e); }
   if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-search"></i> Consultar'; }
@@ -316,7 +317,7 @@ async function cargarResumen_(q) {
   document.querySelectorAll('#tSect input.firma').forEach(inp => { if (!puede('programaciones.editar')) { inp.readOnly = true; return; } inp.onchange = () => guardarFirma(inp.closest('tr')); });
   $('#tFin tbody').innerHTML = r.finiquitos.map(f => `<tr><td>${esc(f.fundo)}</td><td><b>${f.cant}</b></td></tr>`).join('') || '<tr><td colspan="2" class="text-muted">—</td></tr>';
   $('#tSus tbody').innerHTML = r.suspensiones.map(s => `<tr><td>${esc(s.fundo)}</td><td>${dmy(s.inicio)}</td><td>${dmy(s.fin)}</td><td>${s.dias}</td><td><b>${s.cant}</b></td></tr>`).join('') || '<tr><td colspan="5" class="text-muted">—</td></tr>';
-  const det = await api('/api/programacion?fechas=' + q);
+  const det = r.detalle || await api('/api/programacion?fechas=' + q);   // v3.4: el detalle llega con el resumen
   $('#dCount').textContent = `(${det.length})`;
   $('#tDet tbody').innerHTML = det.map(d => `<tr><td>${d.dni}</td><td>${esc(d.nombres)}</td><td>${esc(orgNombre(d.empresa))}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${badgeEst(d.estatus)}</td><td>${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap">${esc(d.observacion)}</td><td class="text-end">${puede('programaciones.eliminar') ? `<button class="btn-ico danger" title="Eliminar" onclick="eliminar(${d.id})"><i class="bi bi-trash"></i></button>` : ''}</td></tr>`).join('') || '<tr><td colspan="14" class="empty">Sin registros para esa(s) fecha(s)</td></tr>';
 }

@@ -332,7 +332,6 @@
   const porGet = d => fetch(window.API_URL + (window.API_URL.includes('?') ? '&' : '?') + 'payload=' + encodeURIComponent(JSON.stringify(d))).then(r => r.json());
   const post = d => fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) }).then(r => r.json())
     .catch(() => porGet(d).then(j => { try { sessionStorage.setItem('ceses_modo_get', '1'); } catch {} return j; }));
-  post({ action: 'publico' }).then(d => { if (d && d.trabajadores != null) { stTrab.textContent = d.trabajadores.toLocaleString('es-PE'); stReg.textContent = d.registros.toLocaleString('es-PE'); } }).catch(() => {});
   try { if (localStorage.getItem('ceses_token')) post({ action: 'yo', token: localStorage.getItem('ceses_token') }).then(u => { if (u && u.usuario) location.href = 'app.html'; }); } catch {}
   f.onsubmit = async e => {
     e.preventDefault(); err.textContent = ''; btn.classList.add('loading');
