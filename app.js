@@ -242,11 +242,14 @@ let previaOK = false;
 function paso(n) { document.querySelectorAll('.stepper .stp').forEach((s, i) => s.classList.toggle('on', i < n)); }
 async function validar() {
   $('#rErr').textContent = ''; previaOK = false; $('#btnGrabar').disabled = true; paso(2);
+  const btn = document.querySelector('button[onclick="validar()"]'); if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Validando…'; }
+  $('#tPrev tbody').innerHTML = '<tr><td colspan="11" class="empty"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Validando el lote contra las bases…</td></tr>';
   try {
     const v = await api('/api/programacion/validar', { method: 'POST', body: JSON.stringify(datosLote()) });
     pintarPrevia(v);
     previaOK = v.filas.length > 0; $('#btnGrabar').disabled = !previaOK; if (previaOK) paso(3);
-  } catch (e) { $('#rErr').textContent = e.message; }
+  } catch (e) { $('#rErr').textContent = e.message; $('#tPrev tbody').innerHTML = ''; }
+  if (btn) { btn.disabled = false; btn.innerHTML = '<i class="bi bi-check2-square"></i> Validar información'; }
 }
 function pintarPrevia(v) {
   const f = v.filas;
