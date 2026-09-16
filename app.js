@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v3.6.2';
+const APP_VERSION = 'v3.7';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -946,4 +946,15 @@ async function enviarRetornos(desdeInicio) {
   const p = desdeInicio ? {} : rtParams();
   const c = await confirmar({ titulo: 'Alertar rutas por retornar', msg: 'Se enviará por correo el resumen de rutas por retornar (cantidades por fecha, fundo y ruta) con el detalle nominal en Excel adjunto a los destinatarios configurados (RETORNOS_PARA o ALERTAS_PARA).', btn: 'Enviar' }); if (!c.ok) return;
   try { const r = await gas('correoRetornos', p); toast(`Alerta de retornos enviada a ${esc(r.para)} · ${r.resumen.personas} persona(s) / ${r.resumen.rutas} ruta(s)`); } catch (e) { toast(e.message, 'err', 7000); }
+}
+
+// ---------- exportar retornos (v3.7): Excel completo (Resumen, Por fundo, Detalle nominal) o PDF ----------
+async function exportarRetornos(formato, btn) {
+  const html = btn ? btn.innerHTML : '';
+  if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generando…'; }
+  try {
+    const r = await gas('retornosExportar', Object.assign({ formato }, rtParams()));
+    window.open(r.url, '_blank'); toast((formato === 'pdf' ? 'PDF' : 'Excel') + ' generado: ' + esc(r.nombre));
+  } catch (e) { toast(e.message, 'err', 7000); }
+  if (btn) { btn.disabled = false; btn.innerHTML = html; }
 }

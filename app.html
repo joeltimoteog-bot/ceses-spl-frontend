@@ -641,6 +641,8 @@
       <div><label class="form-label small">Días hacia adelante</label><select class="form-select" id="rtDias"><option value="mes" selected>Resto del mes actual</option><option value="mes2">Este mes y el siguiente</option><option value="1">1 día</option><option value="3">3 días</option><option value="7">7 días</option><option value="14">14 días</option><option value="30">30 días</option><option value="60">60 días</option><option value="90">90 días</option></select></div>
       <div class="f-actions">
         <button class="btn btn-primary" id="btnRetornos" onclick="cargarRetornos()"><i class="bi bi-search"></i> Consultar</button>
+        <button class="btn btn-outline-success" data-perm="reportes.exportar" onclick="exportarRetornos('xlsx', this)"><i class="bi bi-file-earmark-excel"></i> Excel</button>
+        <button class="btn btn-outline-danger" data-perm="reportes.exportar" onclick="exportarRetornos('pdf', this)"><i class="bi bi-file-earmark-pdf"></i> PDF</button>
         <button class="btn btn-gold" data-perm="correos.enviar_correo" onclick="enviarRetornos(false)"><i class="bi bi-envelope-fill"></i> Alertar a sectores</button>
       </div>
     </div>
