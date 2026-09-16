@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v3.6.1';
+const APP_VERSION = 'v3.6.2';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -894,7 +894,15 @@ function pintarRetornosInicio(r) {
     r.fechas.map(F => F.fundos.map((S, i) => `<tr>${i === 0 ? `<td rowspan="${F.fundos.length}"><b>${dmy(F.fecha)}</b><div class="hint">${F.total} pers.</div></td>` : ''}<td><b>${esc(S.fundo)}</b></td><td class="text-wrap">${S.rutas.map(x => `${esc(x.ruta)} <span class="text-muted">(${x.cant})</span>`).join(', ')}</td><td class="text-end"><b>${S.total}</b></td></tr>`).join('')).join('') + '</tbody></table></div>';
 }
 let retAct = null;
-function rtParams() { const d = $('#rtDesde').value, n = Number($('#rtDias').value) || 3; return d ? { desde: d, dias: n } : { dias: n }; }
+function rtParams() {
+  const d = $('#rtDesde').value, sel = $('#rtDias').value, ini = d ? new Date(d + 'T00:00:00') : new Date(); ini.setHours(0, 0, 0, 0);
+  let n = Number(sel) || 3;
+  if (sel === 'mes' || sel === 'mes2') {   // hasta el último día del mes actual (o del siguiente), contado desde la fecha de inicio
+    const fin = new Date(ini.getFullYear(), ini.getMonth() + (sel === 'mes2' ? 2 : 1), 0);
+    n = Math.max(0, Math.round((fin - ini) / 86400000));
+  }
+  return d ? { desde: d, dias: n } : { dias: n };
+}
 async function cargarRetornos() {
   const btn = $('#btnRetornos'); btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Consultando…';
   $('#rtMsg').innerHTML = '';
