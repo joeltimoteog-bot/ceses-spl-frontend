@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v3.9';
+const APP_VERSION = 'v4.0';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -22,6 +22,7 @@ const pistaHtml = txt => txt.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace
 // Ahora: timeout controlado, hasta 3 intentos con espera progresiva (0 s → 2 s → 5 s), reconexión por GET si el
 // proxy bloquea POST, estados de conexión visibles (🟢🟡🟠🔴), mensajes amigables y telemetría de tiempos.
 // ======================================================
+const D1 = { sesion: null, fallas: 0, apagadoHasta: 0 };   // v4.0: sesión del API de consulta rápida (se llena en el arranque)
 const NET = { estado: 'ok', enVuelo: 0, fallasSeguidas: 0, ultimoOk: Date.now(), sonda: null, ultimoTecnico: '' };
 const NET_TIMEOUT_MS = 45000, NET_ESPERAS = [0, 2000, 5000];   // 3 intentos
 const NET_SIN_REINTENTO = new Set(['subirExcel', 'correoEnviar', 'correoRetornos', 'enviarAlertas', 'login']);   // efectos externos sin idempotencia
@@ -172,12 +173,13 @@ const TITULOS = {
   registro: ['Registro masivo', 'Suspensiones, finiquitos y sin efecto por lote'],
   resumen: ['Programaciones', 'Lo programado por sector, firmas y correo'],
   retornos: ['Retornos', 'Rutas por retornar, alertas a sectores y estadísticas'],
+  listado: ['Consultar registros', 'Búsqueda por cualquier campo, filtros y paginación sobre el total'],
   responsables: ['Responsables', 'Analista y supervisor por fundo'],
   panel: ['Panel de Control', 'Usuarios, roles, permisos, auditoría y sesiones'],
   denegado: ['Acceso denegado', 'No cuentas con autorización para este módulo'],
 };
 // permiso que exige cada módulo (el backend lo vuelve a validar en cada acción)
-const PERM_MODULO = { inicio: 'inicio.ver', dni: 'buscar_trabajador.ver', registro: 'registro_masivo.ver', resumen: 'programaciones.ver', retornos: 'programaciones.ver', responsables: 'responsables.ver', panel: 'panel.ver' };
+const PERM_MODULO = { inicio: 'inicio.ver', dni: 'buscar_trabajador.ver', registro: 'registro_masivo.ver', resumen: 'programaciones.ver', retornos: 'programaciones.ver', listado: 'programaciones.ver', responsables: 'responsables.ver', panel: 'panel.ver' };
 let yoAct = null, PERM = {};
 function puede(p) { return !!PERM[p]; }
 function primerModulo() { return Object.keys(PERM_MODULO).find(m => puede(PERM_MODULO[m])) || 'denegado'; }
@@ -197,6 +199,7 @@ function ir(p) {
   if (p === 'inicio') cargarInicio();
   if (p === 'responsables') cargarResp();
   if (p === 'retornos') cargarRetornos();
+  if (p === 'listado') prepararListado();
   if (p === 'registro') cargarCatalogos();
   if (p === 'panel') cargarPanel();
 }
@@ -269,7 +272,7 @@ async function buscarDNI() {
   if (!/^\d{6,12}$/.test(dni)) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> El DNI debe contener solo números'; return; }
   const btnB = $('#btnBuscar'); btnB.classList.add('loading'); btnB.disabled = true;
   try {
-    const t = await cacheGet('trab:' + dni, () => api('/api/trabajador/' + dni));
+    const t = await cacheGet('trab:' + dni, () => d1Get('/trabajador/' + dni).catch(() => api('/api/trabajador/' + dni)));   // v4.0: base de consulta (D1) con respaldo en GAS
     const a = t.antiguedad;
     const estCls = t.estado === 'INDETERMINADO' ? 'danger' : t.estado === 'PERIODO DE PRUEBA' ? 'info' : '';
     const aviso = t.en_base ? '' : `<div class="alert alert-warning py-2 small mb-3"><i class="bi bi-exclamation-triangle-fill"></i> <b>No está en la base activa de las organizaciones</b> (cesado o no vigente). Último registro: ${badgeEst(t.ultimo_estatus)} ${dmy(t.ultimo_registro)}. Ficha tomada de su historial.</div>`;
@@ -292,7 +295,7 @@ async function buscarDNI() {
         ${item('Base actualizada', esc(t.sincronizado_en || '—'), 'bi-database-fill-check', 'span2')}
       </div></div>`;
     histAct = t.historial; dniAct = dni;
-    $('#hCount').textContent = `(${t.historial.length} registros)`;
+    $('#hCount').innerHTML = `(${t.historial.length} registros)` + (t.fuente === 'd1' ? ' <span title="Respondido por la base de consulta rápida">⚡</span>' : '');
     $('#btnHistXls').style.display = t.historial.length ? '' : 'none';
     const totF = t.historial.filter(h => h.estatus === 'FINIQUITO').length, totS = t.historial.filter(h => /^SUSPENSI/.test(h.estatus || '')).length, totSE = t.historial.filter(h => h.estatus === 'SIN EFECTO').length;
     $('#hResumen').innerHTML = t.historial.length ? `<div class="d-flex flex-wrap gap-2 align-items-center">
@@ -400,7 +403,7 @@ async function grabar() {
         if (!est.grabados) throw new Error('No fue posible grabar el lote. La información ingresada se mantiene; vuelve a intentarlo (los DNI ya registrados se omiten automáticamente).');
         r = { grabados: est.grabados, duplicados: 0, excluidos: 0, alertasPorFundo: {}, verificado: true };
       }
-      cacheClear('resumen:'); cacheClear('trab:'); cacheClear('inicio'); limpiarBorrador_(); loteId = '';
+      cacheClear('resumen:'); cacheClear('trab:'); cacheClear('inicio'); cacheClear('ls:'); limpiarBorrador_(); loteId = '';
       let msg = `Grabados: ${r.grabados}` + (r.duplicados ? ` · Ya registrados (omitidos): ${r.duplicados}` : '') + ` · Excluidos (empleados): ${r.excluidos}` + (r.verificado ? '\n(verificado tras un error de red: el lote quedó grabado correctamente)' : '') + (r.repetido ? '\n(el lote ya había sido grabado: no se duplicó)' : '');
       const al = Object.entries(r.alertasPorFundo || {});
       if (al.length) msg += '\n\nAlertas por fundo:\n' + al.map(([f, t]) => `  ${f}: ` + Object.entries(t).map(([k, n]) => `${k}=${n}`).join(', ')).join('\n');
@@ -510,7 +513,7 @@ async function eliminar(id) {
   if (eliminando_.has(id)) return;
   const c = await confirmar({ titulo: 'Eliminar registro', msg: '¿Eliminar este registro de la programación?', btn: 'Eliminar', peligro: true }); if (!c.ok) return;
   eliminando_.add(id);
-  try { await api('/api/programacion/' + id, { method: 'DELETE' }); cacheClear('resumen:'); cacheClear('trab:'); cacheClear('inicio'); toast('Registro eliminado'); cargarResumen(); } catch (e) { toast(e.message, 'err', 6000); }
+  try { await api('/api/programacion/' + id, { method: 'DELETE' }); cacheClear('resumen:'); cacheClear('trab:'); cacheClear('inicio'); cacheClear('ls:'); toast('Registro eliminado'); cargarResumen(); } catch (e) { toast(e.message, 'err', 6000); }
   eliminando_.delete(id);
 }
 function descargarExcel() {
@@ -983,8 +986,9 @@ const nItem = a => `<div class="ni ${a.tipo}"><i class="bi ${a.tipo === 'danger'
     if (!y) return;
     if (!y.usuario) { try { sessionStorage.removeItem('ceses_yo'); } catch {} location.href = 'index.html'; return; }
     yoAct = y; if (JSON.stringify(y.permisos) !== JSON.stringify(PERM)) { PERM = y.permisos || {}; aplicarPermisosUI(); }
+    if (y.d1) D1.sesion = y.d1;
   });
-  yoAct = yo; PERM = yo.permisos || {};
+  yoAct = yo; PERM = yo.permisos || {}; if (yo.d1) D1.sesion = yo.d1;
   if (yo.organizaciones) Object.assign(window.ORGANIZATION_DISPLAY, yo.organizaciones);   // alias configurados por el administrador (pestaña config)
   aplicarMarca();
   $('#quien').textContent = yo.nombre; $('#rol').textContent = yo.rol; $('#avatar').textContent = (yo.nombre || 'U').trim()[0].toUpperCase();
@@ -1121,10 +1125,10 @@ function pgPintar_(id) {
     tm = setTimeout(async () => {
       const id = ++ultimo; list.innerHTML = '<div class="nom-it"><small><span class="spinner-border spinner-border-sm"></span> Buscando…</small></div>'; list.classList.add('show');
       try {
-        const r = await cacheGet('nom:' + q.toLowerCase(), () => gas('buscarTrabajadores', { q, limite: 30 }));
+        const r = await cacheGet('nom:' + q.toLowerCase(), () => d1Get('/buscar?q=' + encodeURIComponent(q) + '&limite=30').catch(() => gas('buscarTrabajadores', { q, limite: 30 })));   // v4.0
         if (id !== ultimo) return;
         list.innerHTML = r.filas.map(x => `<div class="nom-it" data-dni="${esc(x.dni)}"><span><b>${esc(x.nombre_completo)}</b><br><small>${esc(x.dni)} · ${esc(orgNombre(x.empresa))} · ${esc(x.centro_costo || '')}</small></span><small>${esc(x.cargo || '')}</small></div>`).join('') || '<div class="nom-it"><small>Sin coincidencias en la base activa</small></div>';
-        if (r.total > r.filas.length) list.innerHTML += `<div class="nom-it"><small>${r.total} coincidencias: escribe más letras para afinar</small></div>`;
+        if (r.mas || r.total > r.filas.length) list.innerHTML += `<div class="nom-it"><small>${r.mas ? 'Hay más coincidencias' : r.total + ' coincidencias'}: escribe más letras para afinar</small></div>`;
         list.querySelectorAll('.nom-it[data-dni]').forEach(el => el.onclick = () => { $('#dniIn').value = el.dataset.dni; cerrar(); inp.value = ''; buscarDNI(); });
       } catch (e) { if (id === ultimo) list.innerHTML = `<div class="nom-it text-danger"><small>${esc(e.message)}</small></div>`; }
     }, 350);
@@ -1153,6 +1157,7 @@ async function abrirSalud(refrescar) {
       h += '<h6 class="mt-3">Sincronización</h6><div class="salud-grid">' + (s.sync || []).map(x => tile(esc(orgNombre(x.empresa)), `${(x.filas || 0).toLocaleString('es-PE')} filas<br><small>${esc(x.fecha || 'nunca')}</small>`, x.fecha ? 'ok' : 'bad')).join('') +
         tile('Programación', s.programacion ? `${s.programacion.n.toLocaleString('es-PE')} registros<br><small>última Fecha Doc. ${dmy(s.programacion.ultima)}</small>` : '—') + tile('Sesiones activas', s.sesiones_activas ?? '—') + tile('Lectura de estado', (s.estado_ms || 0) + ' ms', s.estado_ms > 8000 ? 'warn' : 'ok') + '</div>';
       h += '<h6 class="mt-3">Tableros en caché</h6><div class="d-flex flex-wrap gap-2">' + Object.entries(s.tableros).map(([k, v]) => `<span class="stat-chip ${v === 'en caché' ? 'ok' : 'gris'}">${k}: ${v}</span>`).join('') + Object.entries(s.indices || {}).map(([k, v]) => `<span class="stat-chip ${v === 'en caché' ? 'ok' : 'gris'}">índice ${k}: ${v}</span>`).join('') + '</div>';
+      if (s.d1) h += '<h6 class="mt-3">Base de consulta rápida (D1)</h6><div class="salud-grid">' + tile('Servicio', s.d1.ok ? 'Operativo' : 'Con problemas', s.d1.ok ? 'ok' : 'bad') + tile('Trabajadores', (s.d1.trabajadores ?? '—').toLocaleString('es-PE')) + tile('Programaciones', (s.d1.programacion ?? '—').toLocaleString('es-PE')) + (s.d1.sync || []).map(x => tile('Última sync ' + x.tabla, `${esc(x.ultimo)}<br><small>+${x.insertadas} · ~${x.actualizadas} · −${x.eliminadas}</small>`)).join('') + (s.d1.error ? tile('Detalle', esc(s.d1.error), 'bad') : '') + '</div>';
       h += `<div class="hint mt-1">Activadores instalados: ${(s.activadores || []).join(', ') || '<b class="text-danger">ninguno</b> (ejecuta instalarActivadorPrecalentar en Apps Script)'}</div>`;
       if (s.log && s.log.length) h += '<h6 class="mt-3">Operaciones lentas o fallidas (últimas 100 del log técnico)</h6><div class="table-wrap" style="max-height:220px"><table class="table tbl compact"><thead><tr><th>Operación</th><th>Veces</th><th>Prom. ms</th><th>Máx. ms</th><th>Errores</th></tr></thead><tbody>' + s.log.map(x => `<tr><td>${esc(x.op)}</td><td>${x.n}</td><td>${x.prom}</td><td>${x.max}</td><td class="${x.errores ? 'text-danger fw-bold' : ''}">${x.errores}</td></tr>`).join('') + '</tbody></table></div>';
       h += '<h6 class="mt-3">Tiempos de esta sesión (navegador)</h6>' + resumenPerf_();
@@ -1171,3 +1176,58 @@ document.addEventListener('talveniq:reconectado', () => {
   const id = p.id.replace('p-', '');
   if (id === 'inicio') cargarInicio(); else if (id === 'retornos') cargarRetornos(); else if (id === 'responsables') cargarResp(); else if (id === 'resumen' && fechasSel().length) cargarResumen();
 });
+
+
+// ======================================================
+// v4.0 — FASE 2: BASE DE CONSULTA RÁPIDA (Cloudflare Worker + D1)
+// El login entrega { url, token, exp } en `d1`. Las consultas pesadas van al Worker (~100–300 ms);
+// si no responde o rechaza el token, se cae automáticamente a Apps Script (misma respuesta, más lenta).
+// ======================================================
+async function d1Get(path, reintentoAuth) {
+  const s = D1.sesion; const er = m => { const e = new Error(m); e.d1 = true; return e; };
+  if (!s || !s.url || !s.token) throw er('Base de consulta no configurada');
+  if (Date.now() < D1.apagadoHasta) throw er('Base de consulta en pausa temporal');
+  const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 8000), t0 = performance.now();
+  let r;
+  try { r = await fetch(s.url + path, { headers: { Authorization: 'Bearer ' + s.token }, signal: ctrl.signal }); }
+  catch (e) { clearTimeout(tm); D1.fallas++; if (D1.fallas >= 3) { D1.apagadoHasta = Date.now() + 120000; D1.fallas = 0; } telemetria_('d1' + path.split('?')[0].split('/').slice(0, 2).join('/'), Math.round(performance.now() - t0), 'error', 0, e.message, null, e.name === 'AbortError' ? 'TIMEOUT' : 'RED'); throw er('Sin respuesta del servicio de consulta'); }
+  clearTimeout(tm);
+  const ms = Math.round(performance.now() - t0);
+  let j = null; try { j = await r.json(); } catch {}
+  if (r.status === 401 && !reintentoAuth) {   // token vencido → renovar sesión una vez
+    try { const y = await gas('yo'); if (y && y.d1) { D1.sesion = y.d1; return d1Get(path, true); } } catch {}
+  }
+  if (!r.ok) { telemetria_('d1' + path.split('?')[0].split('/').slice(0, 2).join('/'), ms, r.status === 404 ? 'rechazo' : 'error', 0, (j && j.error) || ('HTTP ' + r.status), null, 'HTTP' + r.status); const e = er((j && j.error) || 'Error del servicio de consulta'); e.status = r.status; throw e; }
+  D1.fallas = 0; telemetria_('d1' + path.split('?')[0].split('/').slice(0, 2).join('/'), ms, 'ok', 0, '', Number(r.headers.get('X-Ms')) || null);
+  return j;
+}
+// ---------- Consultar registros ----------
+let lsCatalogosOK = false;
+async function prepararListado() {
+  const emp = $('#lsEmp'); if (emp.options.length === 1) Object.keys(window.ORGANIZATION_DISPLAY || {}).forEach(k => emp.insertAdjacentHTML('beforeend', `<option value="${esc(k)}">${esc(orgNombre(k))}</option>`));
+  if (!lsCatalogosOK) { try { await cargarCatalogos(); } catch {} lsCatalogosOK = true; }
+  try { $('#lsPor').value = localStorage.getItem('ceses_pg') || '50'; } catch {}
+}
+function filtrosListado() {
+  const v = id => $(id).value.trim();
+  return { q: v('#lsQ'), empresa: v('#lsEmp'), estatus: v('#lsEst'), fundo: v('#lsFundo').toUpperCase(), ruta: v('#lsRuta').toUpperCase(), estado: v('#lsEstado'), estado_retorno: v('#lsRet').toUpperCase(), desde: v('#lsDesde'), hasta: v('#lsHasta'), retorno_desde: v('#lsRetDesde'), retorno_hasta: v('#lsRetHasta'), por: $('#lsPor').value };
+}
+function limpiarListado() { ['#lsQ', '#lsEmp', '#lsEst', '#lsFundo', '#lsRuta', '#lsEstado', '#lsRet', '#lsDesde', '#lsHasta', '#lsRetDesde', '#lsRetHasta'].forEach(id => $(id).value = ''); $('#tLs tbody').innerHTML = '<tr><td colspan="17" class="empty"><i class="bi bi-funnel"></i>Define filtros y presiona Consultar</td></tr>'; $('#lsPg').innerHTML = ''; $('#lsTot').innerHTML = ''; $('#lsCount').textContent = ''; $('#lsMsg').innerHTML = ''; }
+async function cargarListado(pagina) {
+  const f = filtrosListado(); f.pagina = pagina || 1;
+  try { localStorage.setItem('ceses_pg', f.por); } catch {}
+  const qs = Object.entries(f).filter(([, v]) => v !== '').map(([k, v]) => k + '=' + encodeURIComponent(v)).join('&');
+  await ocupado($('#btnListado'), async () => {
+    $('#lsMsg').innerHTML = '';
+    try {
+      const r = await cacheGet('ls:' + qs, () => d1Get('/listado?' + qs));
+      $('#lsTot').innerHTML = [['Registros', r.total, ''], ['Finiquitos', r.totales.finiquitos, 'bad'], ['Suspensiones', r.totales.suspensiones, ''], ['Sin efecto', r.totales.sin_efecto, 'gris']].map(([t, n, c]) => `<span class="stat-chip ${c}"><b>${Number(n).toLocaleString('es-PE')}</b> ${t}</span>`).join('') + ' <span class="hint">⚡ base de consulta rápida</span>';
+      $('#lsCount').textContent = r.total ? `(${((r.pagina - 1) * r.por + 1).toLocaleString('es-PE')}–${Math.min(r.pagina * r.por, r.total).toLocaleString('es-PE')} de ${r.total.toLocaleString('es-PE')})` : '(0)';
+      $('#tLs tbody').innerHTML = r.filas.map(d => `<tr><td><b>${dmy(d.fecha_doc)}</b></td><td>${esc(d.dni)}</td><td>${esc(d.nombres)}</td><td>${esc(orgNombre(d.empresa))}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${esc(d.codigo)}</td><td>${badgeEst(d.estatus)}</td><td class="${/INDETERMINADO/i.test(d.estado || '') ? 'text-danger fw-bold' : ''}">${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.estado_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap" style="min-width:200px;font-size:12px">${esc(d.observacion)}</td><td class="text-muted">${esc(d.origen)}</td></tr>`).join('') || '<tr><td colspan="17" class="empty"><i class="bi bi-inbox"></i>Sin registros para esos filtros</td></tr>';
+      $('#lsPg').innerHTML = r.total ? `<span class="pg-i" style="margin-left:0">Página ${r.pagina} de ${r.paginas}</span><button class="btn btn-sm btn-outline-secondary" ${r.pagina <= 1 ? 'disabled' : ''} onclick="cargarListado(${r.pagina - 1})">‹ Anterior</button><button class="btn btn-sm btn-outline-secondary" ${r.pagina >= r.paginas ? 'disabled' : ''} onclick="cargarListado(${r.pagina + 1})">Siguiente ›</button>` : '';
+    } catch (e) {
+      $('#lsMsg').innerHTML = `<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle-fill"></i> ${e.d1 && !e.status ? 'El servicio de consulta rápida no está disponible en este momento. Usa <b>Programaciones</b> (por Fecha Doc.) o <b>Buscar trabajador</b> mientras se restablece.' : esc(e.message)}</div>`;
+    }
+  }, 'Consultando…');
+}
+$('#lsQ').addEventListener('keydown', e => { if (e.key === 'Enter') cargarListado(1); });

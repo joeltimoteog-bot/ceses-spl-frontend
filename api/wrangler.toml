@@ -1,0 +1,13 @@
+name = "ceses-spl-api"
+main = "src/worker.js"
+compatibility_date = "2026-09-01"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "ceses-spl"
+database_id = "ce3530a5-d364-4aee-8f03-a9e58d0c0eb1"
+
+[vars]
+# Orígenes permitidos (CORS), separados por coma
+ORIGENES = "https://joeltimoteog-bot.github.io"
+# Secretos (NO van aquí): D1_API_KEY y D1_TOKEN_SECRET se cargan con `npx wrangler secret put`
