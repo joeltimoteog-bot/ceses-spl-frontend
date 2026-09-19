@@ -19,8 +19,8 @@ window.BRAND_CONFIG = {
   managedBy: 'Servicio tecnológico administrado por TALVENIQ',
   restrictedAccess: 'Acceso exclusivo para usuarios autorizados',
   copyright: '© 2026 TALVENIQ · Human Strategy & Technology · Todos los derechos reservados',
-  version: 'v3.6.1',
-  lastUpdate: '2026-09-15',
+  version: 'v3.9',
+  lastUpdate: '2026-09-19',
   // Módulo "Acerca de": deja vacío lo que aún no tengas; se mostrará "Por configurar"
   about: {
     description: 'TALVENIQ es una empresa especializada en consultoría y soluciones tecnológicas para Recursos Humanos. La plataforma permite gestionar procesos de personal, relaciones laborales, documentación, permisos, reportes, indicadores y operaciones organizacionales de manera segura y eficiente.',

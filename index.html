@@ -11,8 +11,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
-<script src="config.js"></script>
-<script src="brand.js"></script>
+<script src="config.js?v=3.9"></script>
+<script src="brand.js?v=3.9"></script>
 <style>
   /* ============================================================
      TALVENIQ · Login — application shell (2 paneles)
@@ -329,9 +329,20 @@
   anio.textContent = new Date().getFullYear();
   eye.onclick = () => { const t = p.type === 'password'; p.type = t ? 'text' : 'password'; eye.firstElementChild.className = t ? 'bi bi-eye-slash' : 'bi bi-eye'; };
   // Modo compatible: si la red bloquea POST, se reintenta por GET (?payload=JSON) y se avisa a app.js por sessionStorage
-  const porGet = d => fetch(window.API_URL + (window.API_URL.includes('?') ? '&' : '?') + 'payload=' + encodeURIComponent(JSON.stringify(d))).then(r => r.json());
-  const post = d => fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d) }).then(r => r.json())
-    .catch(() => porGet(d).then(j => { try { sessionStorage.setItem('ceses_modo_get', '1'); } catch {} return j; }));
+  // v3.9: timeout controlado (30 s), reintento por GET si el proxy bloquea POST, y un segundo intento automático
+  // ante un corte momentáneo de red; mensajes comprensibles (sin códigos técnicos)
+  const conTimeout = (p, ms) => { const c = new AbortController(); const t = setTimeout(() => c.abort(), ms); return [c.signal, () => clearTimeout(t)]; };
+  const leer = async r => { const t = await r.text(); try { return JSON.parse(t); } catch { const e = new Error('respuesta inválida (HTTP ' + r.status + ')'); e.red = true; throw e; } };
+  const porGet = async d => { const [sg, fin] = conTimeout(0, 30000); try { return await leer(await fetch(window.API_URL + (window.API_URL.includes('?') ? '&' : '?') + 'payload=' + encodeURIComponent(JSON.stringify(d)), { signal: sg })); } catch (e) { if (!e.red) e.red = true; throw e; } finally { fin(); } };
+  const porPost = async d => { const [sg, fin] = conTimeout(0, 30000); try { return await leer(await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: JSON.stringify(d), signal: sg })); } catch (e) { if (!e.red) e.red = true; throw e; } finally { fin(); } };
+  const post = async d => {
+    try { return await porPost(d); }
+    catch (e1) {
+      try { const j = await porGet(d); try { sessionStorage.setItem('ceses_modo_get', '1'); } catch {} return j; }   // POST bloqueado → GET
+      catch (e2) { await new Promise(r => setTimeout(r, 2500)); return porPost(d); }   // corte momentáneo → un segundo intento
+    }
+  };
+  const amigable = ex => (ex && ex.name === 'AbortError') ? 'El servidor tardó demasiado en responder. Vuelve a intentar en unos segundos.' : 'No se pudo conectar con el servidor. Estamos restableciendo la conexión; vuelve a intentar en unos segundos.';
   try { if (localStorage.getItem('ceses_token')) post({ action: 'yo', token: localStorage.getItem('ceses_token') }).then(u => { if (u && u.usuario) location.href = 'app.html'; }); } catch {}
   f.onsubmit = async e => {
     e.preventDefault(); err.textContent = ''; btn.classList.add('loading');
@@ -339,7 +350,10 @@
       const r = await post({ action: 'login', usuario: u.value.trim(), clave: p.value, dispositivo: navigator.userAgent });
       if (r.ok) { localStorage.setItem('ceses_token', r.token); try { const y = Object.assign({}, r); delete y.token; sessionStorage.setItem('ceses_yo', JSON.stringify(y)); } catch {} location.href = 'app.html'; return; }
       err.innerHTML = '<i class="bi bi-exclamation-circle"></i> ' + (r.error || 'Error');
-    } catch { err.innerHTML = '<i class="bi bi-exclamation-circle"></i> No se pudo conectar con el servidor'; }
+    } catch (ex) {   // v3.8: muestra la causa real para poder diagnosticar
+      err.innerHTML = '<i class="bi bi-exclamation-circle"></i> ';
+      err.append(amigable(ex)); console.warn('TALVENIQ login: ' + (ex && ex.message));
+    }
     btn.classList.remove('loading');
   };
 </script>

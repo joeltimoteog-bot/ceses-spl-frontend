@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v3.7';
+const APP_VERSION = 'v3.9';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -16,33 +16,117 @@ const MODO_GET_KEY = 'ceses_modo_get';
 const modoGet = () => { try { return sessionStorage.getItem(MODO_GET_KEY) === '1'; } catch { return false; } };
 const usarModoGet = v => { try { sessionStorage.setItem(MODO_GET_KEY, v ? '1' : '0'); } catch {} };
 const pistaHtml = txt => txt.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 220);
+// ======================================================
+// v3.9 — CAPA DE RED RESILIENTE
+// Antes: un solo fetch sin timeout ni reintento → cualquier corte momentáneo mostraba "Sin conexión".
+// Ahora: timeout controlado, hasta 3 intentos con espera progresiva (0 s → 2 s → 5 s), reconexión por GET si el
+// proxy bloquea POST, estados de conexión visibles (🟢🟡🟠🔴), mensajes amigables y telemetría de tiempos.
+// ======================================================
+const NET = { estado: 'ok', enVuelo: 0, fallasSeguidas: 0, ultimoOk: Date.now(), sonda: null, ultimoTecnico: '' };
+const NET_TIMEOUT_MS = 45000, NET_ESPERAS = [0, 2000, 5000];   // 3 intentos
+const NET_SIN_REINTENTO = new Set(['subirExcel', 'correoEnviar', 'correoRetornos', 'enviarAlertas', 'login']);   // efectos externos sin idempotencia
+const NET_TXT = { ok: ['🟢', 'Conectado'], sync: ['🟡', 'Sincronizando'], lenta: ['🟡', 'Conexión lenta'], reconn: ['🟠', 'Reconectando'], temp: ['🟡', 'Información temporal'], off: ['🔴', 'Sin conexión'] };
+function netEstado(e, detalle) {
+  if (e === 'sync' && NET.estado !== 'ok') return;   // no pisar reconectando/lenta con "sincronizando"
+  NET.estado = e; const el = document.getElementById('connDot'); if (!el) return;
+  const [ic, tx] = NET_TXT[e] || NET_TXT.ok;
+  el.className = 'conn ' + e; el.innerHTML = `<span class="ic">${ic}</span><span class="tx">${tx}</span>`; el.title = detalle || tx + ' · clic para ver el estado del sistema';
+}
+const espera_ = ms => new Promise(r => setTimeout(r, ms));
+const msgAmigable_ = (accion, tecnico) => (accion === 'grabar' || accion === 'validar' || /^guardar|^firma$|^eliminar$/.test(accion))
+  ? 'No fue posible completar la operación. La información ingresada se mantiene y puedes volver a intentarlo.'
+  : 'No se pudo obtener la información en este momento. Estamos restableciendo la conexión; vuelve a intentarlo en unos segundos.';
 async function pedir_(payload, porGet) {
-  const cuerpo = JSON.stringify(payload); let r;
+  const cuerpo = JSON.stringify(payload), ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), NET_TIMEOUT_MS); let r;
   try {
     r = porGet
-      ? await fetch(window.API_URL + (window.API_URL.includes('?') ? '&' : '?') + 'payload=' + encodeURIComponent(cuerpo), { method: 'GET', redirect: 'follow' })
-      : await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: cuerpo, redirect: 'follow' });
-  } catch (e) { const er = new Error('Sin conexión con el servidor (' + (e.message || 'red') + '). Revisa la red o el proxy de tu equipo.'); er.red = true; throw er; }
+      ? await fetch(window.API_URL + (window.API_URL.includes('?') ? '&' : '?') + 'payload=' + encodeURIComponent(cuerpo), { method: 'GET', redirect: 'follow', signal: ctrl.signal })
+      : await fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: cuerpo, redirect: 'follow', signal: ctrl.signal });
+  } catch (e) {
+    const tiempo = e && e.name === 'AbortError';
+    const er = new Error(tiempo ? 'Tiempo de espera agotado (' + (NET_TIMEOUT_MS / 1000) + ' s)' : 'Error de red (' + (e.message || 'fetch') + ')'); er.red = true; er.codigo = tiempo ? 'TIMEOUT' : 'RED'; throw er;
+  } finally { clearTimeout(tm); }
   const txt = await r.text();
   try { return JSON.parse(txt); }
-  catch { const er = new Error(`Respuesta inválida del servidor (HTTP ${r.status}${r.url && !r.url.includes('script.google') ? ' · ' + new URL(r.url).host : ''}). ${pistaHtml(txt) || 'Sin contenido'}`); er.red = true; throw er; }
+  catch { const er = new Error(`Respuesta inválida del servidor (HTTP ${r.status}${r.url && !r.url.includes('script.google') ? ' · ' + new URL(r.url).host : ''}). ${pistaHtml(txt) || 'Sin contenido'}`); er.red = true; er.codigo = 'HTTP' + r.status; throw er; }
+}
+async function pedirConModo_(payload, cabeGet, action) {
+  if (modoGet() && cabeGet) return pedir_(payload, true);
+  try { return await pedir_(payload, false); }
+  catch (e) {
+    if (!(e.red && cabeGet)) throw e;
+    const j = await pedir_(payload, true);            // POST bloqueado → mismo pedido por GET (modo compatible)
+    usarModoGet(true); console.warn('TALVENIQ: POST bloqueado en esta red, usando modo compatible (GET).');
+    return j;
+  }
 }
 async function gas(action, data = {}) {
-  const payload = { action, token: token(), ...data };
+  const payload = { action, token: token(), medir: 1, ...data };
   const cabeGet = JSON.stringify(payload).length < 6000;   // los lotes grandes (grabar, subir Excel) siguen por POST
-  let j;
-  if (modoGet() && cabeGet) j = await pedir_(payload, true);
-  else {
-    try { j = await pedir_(payload, false); }
-    catch (e) {
-      if (!(e.red && cabeGet) || action === 'grabar') throw e;   // grabar nunca se reintenta solo (evita ejecutar dos veces); el módulo verifica con loteEstado
-      j = await pedir_(payload, true);            // POST bloqueado → reintento por GET
-      usarModoGet(true); console.warn('TALVENIQ: POST bloqueado en esta red, usando modo compatible (GET).');
+  // grabar solo se reintenta cuando lleva lote_id (el backend devuelve el mismo resultado: sin duplicados)
+  const reintentable = !NET_SIN_REINTENTO.has(action) && (action !== 'grabar' || !!payload.lote_id);
+  const intentos = reintentable ? NET_ESPERAS.length : 1, t0 = performance.now();
+  let ultimo = null; NET.enVuelo++; if (NET.enVuelo === 1) netEstado('sync');
+  try {
+    for (let i = 0; i < intentos; i++) {
+      if (i > 0) { netEstado('reconn', 'Reconectando con la fuente de información… (intento ' + (i + 1) + ' de ' + intentos + ')'); await espera_(NET_ESPERAS[i]); }
+      try {
+        const j = await pedirConModo_(payload, cabeGet, action), ms = Math.round(performance.now() - t0);
+        NET.fallasSeguidas = 0; NET.ultimoOk = Date.now();
+        telemetria_(action, ms, j && j.error ? 'rechazo' : 'ok', i, j && j.error ? j.error : '', j && j._ms);
+        if (j && j.error === 'No autenticado') { try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem('ceses_yo'); } catch {} location.href = 'index.html'; throw new Error('sesión'); }
+        if (j && j.error) throw new Error(orgTexto(j.error));
+        netEstadoFinal_(ms > 8000 ? 'lenta' : 'ok');
+        return j;
+      } catch (e) {
+        if (!e.red) { netEstadoFinal_(NET.estado === 'reconn' ? 'ok' : NET.estado); throw e; }   // error de negocio: no se reintenta
+        ultimo = e; NET.ultimoTecnico = e.message; console.warn('TALVENIQ red [' + action + '] intento ' + (i + 1) + ': ' + e.message);
+      }
     }
-  }
-  if (j && j.error === 'No autenticado') { try { localStorage.removeItem(TOKEN_KEY); sessionStorage.removeItem('ceses_yo'); } catch {} location.href = 'index.html'; throw new Error('sesión'); }
-  if (j && j.error) throw new Error(orgTexto(j.error));
-  return j;
+    // agotados los intentos
+    NET.fallasSeguidas++; const ms = Math.round(performance.now() - t0);
+    telemetria_(action, ms, 'error', intentos - 1, ultimo && ultimo.message, null, ultimo && ultimo.codigo);
+    netEstadoFinal_('off'); sondaReconexion_();
+    const er = new Error(msgAmigable_(action, ultimo && ultimo.message)); er.red = true; er.tecnico = ultimo && ultimo.message; er.codigo = ultimo && ultimo.codigo; throw er;
+  } finally { NET.enVuelo--; }
+}
+function netEstadoFinal_(e) { NET.estado = 'ok'; netEstado(e); }
+// Sonda: mientras el estado sea "sin conexión", comprueba el backend cada 15 s y avisa cuando vuelve
+function sondaReconexion_() {
+  if (NET.sonda) return;
+  NET.sonda = setInterval(async () => {
+    if (NET.estado !== 'off') { clearInterval(NET.sonda); NET.sonda = null; return; }
+    try { await pedir_({ action: 'salud' }, true); clearInterval(NET.sonda); NET.sonda = null; NET.estado = 'ok'; netEstado('ok'); toast('Conexión restablecida con la fuente de información.', 'ok'); document.dispatchEvent(new CustomEvent('talveniq:reconectado')); }
+    catch {}
+  }, 15000);
+}
+window.addEventListener('online', () => { if (NET.estado === 'off') sondaReconexion_(); });
+window.addEventListener('offline', () => { NET.estado = 'ok'; netEstado('off', 'Tu equipo no tiene red'); });
+// ---------- telemetría (tiempos por operación; se envía por lotes al log técnico del backend) ----------
+const PERF = [];
+function telemetria_(op, ms, r, re, err, msServidor, cod) {
+  const e = { t: new Date().toISOString().slice(0, 19).replace('T', ' '), op, ms, r, re: re || 0, err: String(err || '').slice(0, 200), cod: cod || '', v: APP_VERSION, d: msServidor ? 'servidor ' + msServidor + ' ms' : '' };
+  PERF.push(e); if (PERF.length > 500) PERF.shift();
+  if (op !== 'telemetria') { try { const b = JSON.parse(localStorage.getItem('ceses_tel') || '[]'); b.push(e); localStorage.setItem('ceses_tel', JSON.stringify(b.slice(-200))); } catch {} }
+}
+async function enviarTelemetria_(final) {
+  let b = []; try { b = JSON.parse(localStorage.getItem('ceses_tel') || '[]'); } catch {}
+  if (!b.length || !token()) return;
+  try { localStorage.removeItem('ceses_tel'); } catch {}
+  const cuerpo = JSON.stringify({ action: 'telemetria', token: token(), eventos: b });
+  if (final) { try { fetch(window.API_URL, { method: 'POST', headers: { 'content-type': 'text/plain;charset=utf-8' }, body: cuerpo, keepalive: true }).catch(() => {}); } catch {} return; }
+  try { await pedir_(JSON.parse(cuerpo), false); } catch { try { const prev = JSON.parse(localStorage.getItem('ceses_tel') || '[]'); localStorage.setItem('ceses_tel', JSON.stringify(b.concat(prev).slice(-200))); } catch {} }
+}
+setInterval(() => enviarTelemetria_(false), 5 * 60000);
+window.addEventListener('pagehide', () => enviarTelemetria_(true));
+window.TALVENIQ_PERF = () => { console.table(PERF); return PERF; };
+// ---------- botones: una sola ejecución a la vez ("Procesando…") ----------
+async function ocupado(btn, fn, texto) {
+  if (btn && btn.dataset.ocupado === '1') return;   // doble clic: ignorado
+  const html = btn ? btn.innerHTML : '';
+  if (btn) { btn.dataset.ocupado = '1'; btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> ' + (texto || 'Procesando…'); }
+  try { return await fn(); }
+  finally { if (btn) { btn.dataset.ocupado = '0'; btn.disabled = false; btn.innerHTML = html; } }
 }
 // Caché en memoria de consultas recientes (3 min): repetir una búsqueda o una fecha ya consultada es instantáneo
 const MEM_ = new Map(), MEM_TTL_ = 180000;
@@ -133,7 +217,14 @@ function salir() {
 
 // ---------- inicio ----------
 async function cargarInicio() {
-  const r0 = await gas('inicio');   // v3.4: estado + fechas + alertas en un solo viaje
+  let r0;
+  try { r0 = await cacheGet('inicio', () => gas('inicio')); }   // v3.4: un solo viaje · v3.9: reutilizado 3 min al cambiar de pantalla
+  catch (e) {   // v3.8: el error se muestra con opción de reintentar (antes la pantalla quedaba vacía)
+    if (e.message === 'sesión') return;
+    $('#kpis').innerHTML = `<div class="empty text-danger" style="grid-column:1/-1"><i class="bi bi-wifi-off"></i> ${esc(e.message)} <button class="btn btn-sm btn-outline-primary ms-2" onclick="cacheClear('inicio');cargarInicio()"><i class="bi bi-arrow-clockwise"></i> Reintentar</button></div>`;
+    $('#alGrid').innerHTML = '<div class="empty text-muted">Sin datos (reintenta)</div>';
+    return;
+  }
   const e = r0.estado;
   const tot = e.trabajadores.reduce((s, t) => s + t.n, 0);
   $('#kpis').innerHTML = [
@@ -161,6 +252,7 @@ async function subirExcel(inp) {
     const base64 = await new Promise((ok, ko) => { const rd = new FileReader(); rd.onload = () => ok(rd.result.split(',')[1]); rd.onerror = ko; rd.readAsDataURL(f); });
     const j = await gas('subirExcel', { base64, nombre: f.name });
     $('#syncMsg').innerHTML = `<span class="text-success">✔ Bases actualizadas: ${Object.keys(j.filas || {}).map(k => esc(orgNombre(k)) + ' ' + j.filas[k]).join(' · ')}</span>`;
+    cacheClear(); try { localStorage.removeItem('ceses_catalogos'); } catch {}
     cargarInicio();
   } catch (e) { $('#syncMsg').innerHTML = `<span class="text-danger">✖ ${esc(e.message)}</span>`; }
   inp.value = '';
@@ -172,7 +264,7 @@ let histAct = [], dniAct = '';
 function excelHistorial() { if (dniAct) descargar({ dni: dniAct }).catch(e => alert(e.message)); }
 async function buscarDNI() {
   const dni = $('#dniIn').value.trim();
-  $('#dniErr').textContent = ''; $('#ficha').innerHTML = ''; $('#tHist tbody').innerHTML = ''; $('#hResumen').innerHTML = ''; $('#hCount').textContent = ''; $('#btnHistXls').style.display = 'none';
+  $('#dniErr').textContent = ''; $('#ficha').innerHTML = ''; $('#tHist tbody').innerHTML = ''; $('#hResumen').innerHTML = ''; $('#hCount').textContent = ''; $('#btnHistXls').style.display = 'none'; const pgH = $('#pgHist'); if (pgH) pgH.innerHTML = '';
   if (!dni) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> Ingresa un número de DNI'; return; }
   if (!/^\d{6,12}$/.test(dni)) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> El DNI debe contener solo números'; return; }
   const btnB = $('#btnBuscar'); btnB.classList.add('loading'); btnB.disabled = true;
@@ -206,13 +298,13 @@ async function buscarDNI() {
     $('#hResumen').innerHTML = t.historial.length ? `<div class="d-flex flex-wrap gap-2 align-items-center">
       <span class="badge rounded-pill text-bg-danger">${totF} finiquito(s)</span><span class="badge rounded-pill text-bg-warning">${totS} suspensión(es)</span><span class="badge rounded-pill text-bg-secondary">${totSE} sin efecto</span>
       ${t.por_anio.map(a => `<span class="badge rounded-pill" style="background:#e9eef6;color:var(--navy)">${a.anio}: ${a.sus} SPL · ${a.dias} días · ${a.fin} finiq.</span>`).join('')}</div>` : '';
-    $('#tHist tbody').innerHTML = t.historial.map((h, i) => `<tr>
+    paginar('Hist', t.historial, 31, (h, i) => `<tr>
       <td class="text-muted">${i + 1}</td><td><b>${dmy(h.fecha_doc)}</b></td><td>${badgeEst(h.estatus)}</td><td>${esc(orgNombre(h.empresa))}</td><td>${dmy(h.fecha_firma)}</td><td>${esc(h.semana_mes)}</td><td>${esc(h.mes)}</td><td>${h.anio ?? ''}</td>
       <td><b>${esc(h.fundo_zona)}</b></td><td>${esc(h.ruta)}</td><td>${esc(h.codigo)}</td>
       <td>${esc(h.fundo)}</td><td>${esc(h.cargo)}</td><td class="${/INDETERMINADO/i.test(h.estado || '') ? 'text-danger fw-bold' : ''}">${esc(h.estado)}</td><td>${h.anios ?? ''}a ${h.meses ?? ''}m ${h.dias ?? ''}d</td>
       <td>${dmy(h.f_inicio)}</td><td>${dmy(h.f_renovacion)}</td><td>${dmy(h.f_termino)}</td>
       <td>${dmy(h.fecha_inicio_sl)}</td><td>${dmy(h.fecha_fin_sl)}</td><td>${dmy(h.fecha_retorno)}</td><td>${h.cant_dias ?? ''}</td><td>${esc(h.estado_retorno)}</td><td>${esc(h.status02)}</td><td>${dmy(h.fecha_pago)}</td>
-      <td class="text-wrap" style="min-width:220px;max-width:380px;font-size:12px">${esc(h.observacion)}</td><td>${esc(h.responsable_sector)}</td><td>${esc(h.apoyos)}</td><td>${esc(h.horario_firma)}</td><td>${esc(h.origen)}</td><td class="text-muted">${esc(h.creado_en)}</td></tr>`).join('') || '<tr><td colspan="31" class="empty"><i class="bi bi-inbox"></i>Sin programaciones previas</td></tr>';
+      <td class="text-wrap" style="min-width:220px;max-width:380px;font-size:12px">${esc(h.observacion)}</td><td>${esc(h.responsable_sector)}</td><td>${esc(h.apoyos)}</td><td>${esc(h.horario_firma)}</td><td>${esc(h.origen)}</td><td class="text-muted">${esc(h.creado_en)}</td></tr>`);
   } catch (e) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> ' + esc(e.message); }
   btnB.classList.remove('loading'); btnB.disabled = false;
 }
@@ -221,8 +313,11 @@ $('#dniIn').addEventListener('keydown', e => { if (e.key === 'Enter') buscarDNI(
 // ---------- registro masivo ----------
 let catalogosOK = false;
 async function cargarCatalogos() {
+  restaurarBorrador_();
   if (catalogosOK) return;
-  const c = await api('/api/catalogos');
+  let c = null;
+  try { const g = JSON.parse(localStorage.getItem('ceses_catalogos') || 'null'); if (g && g.v === APP_VERSION && Date.now() - g.t < 3600000) c = g.c; } catch {}   // v3.9: caché local 60 min
+  if (!c) { try { c = await api('/api/catalogos'); try { localStorage.setItem('ceses_catalogos', JSON.stringify({ t: Date.now(), v: APP_VERSION, c })); } catch {} } catch (e) { toast('Catálogos no disponibles por ahora (puedes escribir los valores manualmente): ' + esc(e.message), 'warn', 6000); return; } }
   $('#lFundos').innerHTML = c.fundos.map(f => `<option value="${esc(f)}">`).join('');
   $('#lRutas').innerHTML = c.rutas.map(f => `<option value="${esc(f)}">`).join('');
   $('#lRet').innerHTML = c.estados_retorno.map(f => `<option value="${esc(f)}">`).join('');
@@ -235,6 +330,16 @@ function toggleSusp() {
 }
 $('#rMedida').onchange = toggleSusp; toggleSusp();
 
+const BORRADOR_CAMPOS_ = ['#rMedida', '#rFechaDoc', '#rFechaFirma', '#rIni', '#rFin', '#rFundo', '#rRuta', '#rCodigo', '#rRet', '#rObs', '#rDnis'];
+let loteId = '';   // v3.9: clave de idempotencia del lote validado (el backend devuelve el mismo resultado si se repite)
+function guardarBorrador_() { try { const o = {}; BORRADOR_CAMPOS_.forEach(k => o[k] = $(k).value); o.loteId = loteId; sessionStorage.setItem('ceses_borrador', JSON.stringify(o)); } catch {} }
+function restaurarBorrador_() {
+  try { const o = JSON.parse(sessionStorage.getItem('ceses_borrador') || 'null'); if (!o || restaurarBorrador_.hecho) return; restaurarBorrador_.hecho = true;
+    BORRADOR_CAMPOS_.forEach(k => { if (o[k] !== undefined && o[k] !== '') $(k).value = o[k]; }); loteId = o.loteId || ''; toggleSusp();
+    if (o['#rDnis']) toast('Se recuperó el lote que estabas preparando. Vuelve a presionar <b>Validar información</b>.', 'info', 6000); } catch {}
+}
+function limpiarBorrador_() { try { sessionStorage.removeItem('ceses_borrador'); } catch {} }
+BORRADOR_CAMPOS_.forEach(k => { const el = $(k); if (el) el.addEventListener('input', () => { loteId = ''; guardarBorrador_(); if (previaOK) { previaOK = false; $('#btnGrabar').disabled = true; paso(1); } }); });   // un lote editado debe validarse de nuevo
 function datosLote() {
   return {
     medida: $('#rMedida').value, fecha_doc: $('#rFechaDoc').value, fecha_firma: $('#rFechaFirma').value || $('#rFechaDoc').value,
@@ -251,6 +356,7 @@ async function validar() {
   $('#tPrev tbody').innerHTML = '<tr><td colspan="11" class="empty"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Validando el lote contra las bases…</td></tr>';
   try {
     const v = await api('/api/programacion/validar', { method: 'POST', body: JSON.stringify(datosLote()) });
+    loteId = 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8); guardarBorrador_();   // v3.9: nueva clave por cada validación
     pintarPrevia(v);
     previaOK = v.filas.length > 0; $('#btnGrabar').disabled = !previaOK; if (previaOK) paso(3);
   } catch (e) { $('#rErr').textContent = e.message; $('#tPrev tbody').innerHTML = ''; }
@@ -278,26 +384,32 @@ function pintarPrevia(v) {
 }
 async function grabar() {
   if (!previaOK) return;
-  if (!confirm('¿Grabar el lote validado?')) return;
-  $('#btnGrabar').disabled = true;
-  try {
-    let r;
-    try { r = await api('/api/programacion', { method: 'POST', body: JSON.stringify(datosLote()) }); }
-    catch (e) {
-      if (!e.red) throw e;
-      // la respuesta se perdió en la red (p. ej. 404 de la redirección de Google): verificar si el lote ya quedó grabado
-      $('#rErr').textContent = 'La respuesta del servidor se perdió; verificando si el lote quedó grabado…';
-      const est = await gas('loteEstado', datosLote());
-      if (!est.grabados) throw new Error('No se pudo grabar el lote. Vuelve a intentar: el sistema omite automáticamente los DNI que ya estén registrados. [' + APP_VERSION + '] Detalle: ' + e.message.slice(0, 160));
-      r = { grabados: est.grabados, duplicados: 0, excluidos: 0, alertasPorFundo: {}, verificado: true };
-    }
-    cacheClear('resumen:'); cacheClear('trab:');
-    let msg = `Grabados: ${r.grabados}` + (r.duplicados ? ` · Ya registrados (omitidos): ${r.duplicados}` : '') + ` · Excluidos (empleados): ${r.excluidos}` + (r.verificado ? '\n(verificado tras un error de red: el lote quedó grabado correctamente)' : '');
-    const al = Object.entries(r.alertasPorFundo);
-    if (al.length) msg += '\n\nAlertas por fundo:\n' + al.map(([f, t]) => `  ${f}: ` + Object.entries(t).map(([k, n]) => `${k}=${n}`).join(', ')).join('\n');
-    alert(msg);
-    $('#rDnis').value = ''; $('#tPrev tbody').innerHTML = '<tr><td colspan="11" class="empty"><i class="bi bi-check2-circle"></i>Lote grabado. Completa un nuevo lote y presiona <b>Validar información</b></td></tr>'; $('#rAlertas').innerHTML = ''; $('#rTot').innerHTML = ''; previaOK = false; paso(1);
-  } catch (e) { $('#rErr').textContent = e.message; $('#btnGrabar').disabled = false; }
+  const btn = $('#btnGrabar'); if (btn.dataset.ocupado === '1') return;
+  const c = await confirmar({ titulo: 'Grabar lote', msg: '¿Grabar el lote validado? El sistema omite automáticamente los DNI que ya estén registrados con la misma Fecha Doc. y medida.', btn: 'Grabar' }); if (!c.ok) return;
+  await ocupado(btn, async () => {
+    $('#rErr').textContent = '';
+    try {
+      const lote = Object.assign(datosLote(), { lote_id: loteId });
+      let r;
+      try { r = await api('/api/programacion', { method: 'POST', body: JSON.stringify(lote) }); }
+      catch (e) {
+        if (!e.red) throw e;
+        // se agotaron los reintentos: verificar si el lote quedó grabado antes de rendirse
+        $('#rErr').textContent = 'La respuesta del servidor se perdió; verificando si el lote quedó grabado…';
+        const est = await gas('loteEstado', datosLote());
+        if (!est.grabados) throw new Error('No fue posible grabar el lote. La información ingresada se mantiene; vuelve a intentarlo (los DNI ya registrados se omiten automáticamente).');
+        r = { grabados: est.grabados, duplicados: 0, excluidos: 0, alertasPorFundo: {}, verificado: true };
+      }
+      cacheClear('resumen:'); cacheClear('trab:'); cacheClear('inicio'); limpiarBorrador_(); loteId = '';
+      let msg = `Grabados: ${r.grabados}` + (r.duplicados ? ` · Ya registrados (omitidos): ${r.duplicados}` : '') + ` · Excluidos (empleados): ${r.excluidos}` + (r.verificado ? '\n(verificado tras un error de red: el lote quedó grabado correctamente)' : '') + (r.repetido ? '\n(el lote ya había sido grabado: no se duplicó)' : '');
+      const al = Object.entries(r.alertasPorFundo || {});
+      if (al.length) msg += '\n\nAlertas por fundo:\n' + al.map(([f, t]) => `  ${f}: ` + Object.entries(t).map(([k, n]) => `${k}=${n}`).join(', ')).join('\n');
+      alert(msg);
+      $('#rDnis').value = ''; $('#tPrev tbody').innerHTML = '<tr><td colspan="11" class="empty"><i class="bi bi-check2-circle"></i>Lote grabado. Completa un nuevo lote y presiona <b>Validar información</b></td></tr>'; $('#rAlertas').innerHTML = ''; $('#rTot').innerHTML = ''; previaOK = false; paso(1);
+      try { localStorage.removeItem('ceses_catalogos'); } catch {}   // el lote pudo agregar un fundo/ruta nuevos
+    } catch (e) { $('#rErr').textContent = e.message; }
+  }, 'Grabando…');
+  $('#btnGrabar').disabled = !previaOK;
 }
 
 // ---------- resumen ----------
@@ -340,7 +452,7 @@ async function cargarResumen_(q) {
   $('#tSus tbody').innerHTML = r.suspensiones.map(s => `<tr><td>${esc(s.fundo)}</td><td>${dmy(s.inicio)}</td><td>${dmy(s.fin)}</td><td>${s.dias}</td><td><b>${s.cant}</b></td></tr>`).join('') || '<tr><td colspan="5" class="text-muted">—</td></tr>';
   const det = r.detalle || await api('/api/programacion?fechas=' + q);   // v3.4: el detalle llega con el resumen
   $('#dCount').textContent = `(${det.length})`;
-  $('#tDet tbody').innerHTML = det.map(d => `<tr><td>${d.dni}</td><td>${esc(d.nombres)}</td><td>${esc(orgNombre(d.empresa))}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${badgeEst(d.estatus)}</td><td>${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap">${esc(d.observacion)}</td><td class="text-end">${puede('programaciones.eliminar') ? `<button class="btn-ico danger" title="Eliminar" onclick="eliminar(${d.id})"><i class="bi bi-trash"></i></button>` : ''}</td></tr>`).join('') || '<tr><td colspan="14" class="empty">Sin registros para esa(s) fecha(s)</td></tr>';
+  paginar('Det', det, 14, d => `<tr><td>${d.dni}</td><td>${esc(d.nombres)}</td><td>${esc(orgNombre(d.empresa))}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${badgeEst(d.estatus)}</td><td>${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap">${esc(d.observacion)}</td><td class="text-end">${puede('programaciones.eliminar') ? `<button class="btn-ico danger" title="Eliminar" onclick="eliminar(${d.id})"><i class="bi bi-trash"></i></button>` : ''}</td></tr>`);
 }
 function pintarDinamica(r) {
   const fechas = r.fechas;
@@ -377,22 +489,29 @@ function pintarDinamica(r) {
   document.querySelectorAll('#pivWrap input.firma-piv').forEach(inp => { if (!puede('programaciones.editar')) { inp.readOnly = true; return; } inp.onchange = async () => {
     const tr = inp.closest('tr'); const body = { fecha_doc: inp.dataset.f, sector: inp.dataset.s };
     tr.querySelectorAll('input.firma-piv').forEach(i => body[i.dataset.k] = i.value.trim());
-    await api('/api/firmas', { method: 'PUT', body: JSON.stringify(body) });
+    try { await api('/api/firmas', { method: 'PUT', body: JSON.stringify(body) }); toast('Firma guardada', 'ok', 1500); } catch (e) { toast(e.message, 'err', 6000); return; }
     const ok = body.horario && body.responsable && body.apoyos; const c = tr.lastElementChild;
     c.className = ok ? 'ok' : 'falta'; c.textContent = ok ? '✔ COMPLETO' : '✖ FALTA HORARIO O APOYOS';
-    cargarResumen();
+    cacheClear('resumen:');   // v3.9: no se vuelve a consultar todo el resumen; se actualiza solo la fila
+    const tr2 = document.querySelector(`#tSect tr[data-f="${body.fecha_doc}"][data-s="${CSS.escape(body.sector)}"]`);
+    if (tr2) { tr2.querySelectorAll('input.firma').forEach(i => { if (body[i.dataset.k] !== undefined) i.value = body[i.dataset.k]; }); const c2 = tr2.querySelector('.rec'); if (c2) { c2.className = 'rec ' + (ok ? 'ok' : 'falta'); c2.textContent = c.textContent; } }
   }; });
 }
 async function guardarFirma(tr) {
   const body = { fecha_doc: tr.dataset.f, sector: tr.dataset.s };
   tr.querySelectorAll('input.firma').forEach(i => body[i.dataset.k] = i.value.trim());
-  await api('/api/firmas', { method: 'PUT', body: JSON.stringify(body) });
+  try { await api('/api/firmas', { method: 'PUT', body: JSON.stringify(body) }); toast('Firma guardada', 'ok', 1500); } catch (e) { toast(e.message, 'err', 6000); return; }
   const ok = body.horario && body.responsable && body.apoyos;
   const c = tr.querySelector('.rec'); c.className = 'rec ' + (ok ? 'ok' : 'falta'); c.textContent = ok ? '✔ COMPLETO' : '✖ FALTA HORARIO O APOYOS';
+  cacheClear('resumen:');
 }
+const eliminando_ = new Set();
 async function eliminar(id) {
-  if (!confirm('¿Eliminar este registro de la programación?')) return;
-  try { await api('/api/programacion/' + id, { method: 'DELETE' }); cacheClear('resumen:'); cacheClear('trab:'); cargarResumen(); } catch (e) { alert(e.message); }
+  if (eliminando_.has(id)) return;
+  const c = await confirmar({ titulo: 'Eliminar registro', msg: '¿Eliminar este registro de la programación?', btn: 'Eliminar', peligro: true }); if (!c.ok) return;
+  eliminando_.add(id);
+  try { await api('/api/programacion/' + id, { method: 'DELETE' }); cacheClear('resumen:'); cacheClear('trab:'); cacheClear('inicio'); toast('Registro eliminado'); cargarResumen(); } catch (e) { toast(e.message, 'err', 6000); }
+  eliminando_.delete(id);
 }
 function descargarExcel() {
   const f = fechasAct.length ? fechasAct : fechasSel();
@@ -425,14 +544,17 @@ async function enviarCorreo() {
 
 // ---------- responsables ----------
 async function cargarResp() {
-  const r = await api('/api/responsables');
+  let r; try { r = await cacheGet('resp', () => api('/api/responsables')); } catch (e) { $('#tResp tbody').innerHTML = `<tr><td colspan="6" class="empty text-danger">${esc(e.message)}</td></tr>`; return; }
   $('#tResp tbody').innerHTML = r.map(x => `<tr><td><b>${esc(x.fundo)}</b></td><td>${esc(x.analista)}</td><td>${esc(x.correo_analista)}</td><td>${esc(x.supervisor)}</td><td>${esc(x.correo_supervisor)}</td>
     <td class="text-end">${puede('responsables.editar') ? `<button class="btn-ico" title="Editar" onclick='editarResp(${JSON.stringify(x)})'><i class="bi bi-pencil-fill"></i></button>` : ''}</td></tr>`).join('') || '<tr><td colspan="6" class="empty">Sin responsables registrados</td></tr>';
 }
 function editarResp(x) { $('#nFundo').value = x.fundo; $('#nAna').value = x.analista || ''; $('#nAnaC').value = x.correo_analista || ''; $('#nSup').value = x.supervisor || ''; $('#nSupC').value = x.correo_supervisor || ''; $('#nAna').focus(); $('#nFundo').scrollIntoView({ behavior: 'smooth', block: 'center' }); }
-async function guardarResp() {
-  await api('/api/responsables', { method: 'PUT', body: JSON.stringify({ fundo: $('#nFundo').value, analista: $('#nAna').value, correo_analista: $('#nAnaC').value, supervisor: $('#nSup').value, correo_supervisor: $('#nSupC').value }) });
-  ['#nFundo', '#nAna', '#nAnaC', '#nSup', '#nSupC'].forEach(s => $(s).value = ''); cargarResp();
+async function guardarResp(btn) {
+  await ocupado(btn, async () => {
+    try { await api('/api/responsables', { method: 'PUT', body: JSON.stringify({ fundo: $('#nFundo').value, analista: $('#nAna').value, correo_analista: $('#nAnaC').value, supervisor: $('#nSup').value, correo_supervisor: $('#nSupC').value }) }); }
+    catch (e) { toast(e.message, 'err', 6000); return; }
+    ['#nFundo', '#nAna', '#nAnaC', '#nSup', '#nSupC'].forEach(s => $(s).value = ''); cacheClear('resp'); cacheClear('resumen:'); toast('Responsable guardado'); cargarResp();
+  }, 'Guardando…');
 }
 
 // ======================================================
@@ -958,3 +1080,94 @@ async function exportarRetornos(formato, btn) {
   } catch (e) { toast(e.message, 'err', 7000); }
   if (btn) { btn.disabled = false; btn.innerHTML = html; }
 }
+
+
+// ======================================================
+// v3.9 — PAGINACIÓN + FILTRO SOBRE EL TOTAL CARGADO (25 / 50 / 100 por página)
+// ======================================================
+const PG = {};
+function paginar(id, filas, cols, fila) {
+  let n = 50; try { n = Number(localStorage.getItem('ceses_pg')) || 50; } catch {}
+  PG[id] = { filas: filas || [], fila, cols, pag: 1, n, q: '' };
+  pgPintar_(id);
+}
+function pgPintar_(id) {
+  const p = PG[id], q = p.q.toLowerCase();
+  const vis = q ? p.filas.filter(r => JSON.stringify(r).toLowerCase().includes(q)) : p.filas;   // busca en todos los campos del total cargado
+  const tot = vis.length, np = Math.max(1, Math.ceil(tot / p.n)); if (p.pag > np) p.pag = np;
+  const ini = (p.pag - 1) * p.n, parte = vis.slice(ini, ini + p.n);
+  document.querySelector('#t' + id + ' tbody').innerHTML = parte.map((r, i) => p.fila(r, ini + i)).join('') || `<tr><td colspan="${p.cols}" class="empty"><i class="bi bi-inbox"></i>${q ? 'Sin coincidencias' : 'Sin registros'}</td></tr>`;
+  const pg = document.getElementById('pg' + id); if (!pg) return;
+  if (!p.filas.length) { pg.innerHTML = ''; return; }
+  pg.innerHTML = `<div class="pg"><input class="form-control form-control-sm pg-q" placeholder="Filtrar en ${p.filas.length} registro(s)…" value="${esc(p.q)}">
+    <select class="form-select form-select-sm pg-n" title="Registros por página">${[25, 50, 100].map(x => `<option ${x === p.n ? 'selected' : ''}>${x}</option>`).join('')}</select>
+    <span class="pg-i">${tot ? (ini + 1) + '–' + Math.min(ini + p.n, tot) + ' de ' + tot : '0 de 0'}${q && tot !== p.filas.length ? ' (filtrados)' : ''}</span>
+    <button class="btn btn-sm btn-outline-secondary" data-d="-1" ${p.pag <= 1 ? 'disabled' : ''}>‹</button><span>${p.pag} / ${np}</span><button class="btn btn-sm btn-outline-secondary" data-d="1" ${p.pag >= np ? 'disabled' : ''}>›</button></div>`;
+  const inp = pg.querySelector('.pg-q'); let tm; inp.oninput = () => { clearTimeout(tm); tm = setTimeout(() => { p.q = inp.value.trim(); p.pag = 1; const pos = inp.selectionStart; pgPintar_(id); const i2 = pg.querySelector('.pg-q'); i2.focus(); i2.setSelectionRange(pos, pos); }, 200); };
+  pg.querySelector('.pg-n').onchange = e => { p.n = Number(e.target.value); p.pag = 1; try { localStorage.setItem('ceses_pg', p.n); } catch {} pgPintar_(id); };
+  pg.querySelectorAll('button[data-d]').forEach(b => b.onclick = () => { p.pag += Number(b.dataset.d); pgPintar_(id); });
+}
+
+// ======================================================
+// v3.9 — BÚSQUEDA POR NOMBRE / APELLIDOS / CÓDIGO / FUNDO (índice en caché del backend, debounce 350 ms)
+// ======================================================
+(() => {
+  const inp = $('#nomIn'), list = $('#nomList'); if (!inp) return;
+  let tm, ultimo = 0;
+  const cerrar = () => list.classList.remove('show');
+  inp.addEventListener('input', () => {
+    clearTimeout(tm); const q = inp.value.trim();
+    if (q.length < 2) { cerrar(); return; }
+    tm = setTimeout(async () => {
+      const id = ++ultimo; list.innerHTML = '<div class="nom-it"><small><span class="spinner-border spinner-border-sm"></span> Buscando…</small></div>'; list.classList.add('show');
+      try {
+        const r = await cacheGet('nom:' + q.toLowerCase(), () => gas('buscarTrabajadores', { q, limite: 30 }));
+        if (id !== ultimo) return;
+        list.innerHTML = r.filas.map(x => `<div class="nom-it" data-dni="${esc(x.dni)}"><span><b>${esc(x.nombre_completo)}</b><br><small>${esc(x.dni)} · ${esc(orgNombre(x.empresa))} · ${esc(x.centro_costo || '')}</small></span><small>${esc(x.cargo || '')}</small></div>`).join('') || '<div class="nom-it"><small>Sin coincidencias en la base activa</small></div>';
+        if (r.total > r.filas.length) list.innerHTML += `<div class="nom-it"><small>${r.total} coincidencias: escribe más letras para afinar</small></div>`;
+        list.querySelectorAll('.nom-it[data-dni]').forEach(el => el.onclick = () => { $('#dniIn').value = el.dataset.dni; cerrar(); inp.value = ''; buscarDNI(); });
+      } catch (e) { if (id === ultimo) list.innerHTML = `<div class="nom-it text-danger"><small>${esc(e.message)}</small></div>`; }
+    }, 350);
+  });
+  inp.addEventListener('keydown', e => { if (e.key === 'Escape') cerrar(); if (e.key === 'Enter') { const f = list.querySelector('.nom-it[data-dni]'); if (f) f.click(); } });
+  document.addEventListener('click', e => { if (!e.target.closest('.nom-res')) cerrar(); });
+})();
+
+// ======================================================
+// v3.9 — ESTADO DEL SISTEMA (health check) Y RECUPERACIÓN AUTOMÁTICA
+// ======================================================
+async function abrirSalud(refrescar) {
+  const m = bootstrap.Modal.getOrCreateInstance('#mSalud'); if (!refrescar) m.show();
+  const body = $('#saludBody'); body.innerHTML = '<div class="empty"><span class="spinner-border spinner-border-sm text-primary me-2"></span>Consultando el estado del sistema…</div>';
+  const t0 = performance.now();
+  try {
+    const admin = puede('panel.ver');
+    const s = admin ? await gas('saludDetalle') : await gas('salud');
+    const ida = Math.round(performance.now() - t0);
+    const tile = (k, v, cls) => `<div class="sal ${cls || ''}"><div class="k">${k}</div><div class="v">${v}</div></div>`;
+    const okc = v => v === 'ok' ? 'ok' : v === 'lenta' ? 'warn' : 'bad';
+    let h = '<div class="salud-grid">' + tile('Backend', s.backend === 'ok' ? 'Operativo' : 'Con problemas', okc(s.backend)) + tile('Fuente de datos (hoja)', s.hoja === 'ok' ? 'Conectada' : s.hoja === 'lenta' ? 'Lenta' : 'Sin respuesta', okc(s.hoja)) +
+      tile('Caché', s.cache === 'ok' ? 'Operativa' : 'Con problemas', okc(s.cache)) + tile('Ida y vuelta desde tu equipo', ida + ' ms', ida > 8000 ? 'warn' : 'ok') + tile('Versión backend', s.version || '—') + tile('Hora del servidor', s.hora || '—') + '</div>';
+    h += `<div class="mt-2 hint">Conexión actual: <b>${NET_TXT[NET.estado][1]}</b>${NET.ultimoTecnico ? ' · último error técnico: <code>' + esc(NET.ultimoTecnico.slice(0, 120)) + '</code>' : ''} · versión web ${APP_VERSION}${modoGet() ? ' · modo compatible (GET)' : ''}</div>`;
+    if (admin && s.tableros) {
+      h += '<h6 class="mt-3">Sincronización</h6><div class="salud-grid">' + (s.sync || []).map(x => tile(esc(orgNombre(x.empresa)), `${(x.filas || 0).toLocaleString('es-PE')} filas<br><small>${esc(x.fecha || 'nunca')}</small>`, x.fecha ? 'ok' : 'bad')).join('') +
+        tile('Programación', s.programacion ? `${s.programacion.n.toLocaleString('es-PE')} registros<br><small>última Fecha Doc. ${dmy(s.programacion.ultima)}</small>` : '—') + tile('Sesiones activas', s.sesiones_activas ?? '—') + tile('Lectura de estado', (s.estado_ms || 0) + ' ms', s.estado_ms > 8000 ? 'warn' : 'ok') + '</div>';
+      h += '<h6 class="mt-3">Tableros en caché</h6><div class="d-flex flex-wrap gap-2">' + Object.entries(s.tableros).map(([k, v]) => `<span class="stat-chip ${v === 'en caché' ? 'ok' : 'gris'}">${k}: ${v}</span>`).join('') + Object.entries(s.indices || {}).map(([k, v]) => `<span class="stat-chip ${v === 'en caché' ? 'ok' : 'gris'}">índice ${k}: ${v}</span>`).join('') + '</div>';
+      h += `<div class="hint mt-1">Activadores instalados: ${(s.activadores || []).join(', ') || '<b class="text-danger">ninguno</b> (ejecuta instalarActivadorPrecalentar en Apps Script)'}</div>`;
+      if (s.log && s.log.length) h += '<h6 class="mt-3">Operaciones lentas o fallidas (últimas 100 del log técnico)</h6><div class="table-wrap" style="max-height:220px"><table class="table tbl compact"><thead><tr><th>Operación</th><th>Veces</th><th>Prom. ms</th><th>Máx. ms</th><th>Errores</th></tr></thead><tbody>' + s.log.map(x => `<tr><td>${esc(x.op)}</td><td>${x.n}</td><td>${x.prom}</td><td>${x.max}</td><td class="${x.errores ? 'text-danger fw-bold' : ''}">${x.errores}</td></tr>`).join('') + '</tbody></table></div>';
+      h += '<h6 class="mt-3">Tiempos de esta sesión (navegador)</h6>' + resumenPerf_();
+    }
+    body.innerHTML = h; $('#saludHint').textContent = 'Actualizado ' + new Date().toLocaleTimeString('es-PE');
+  } catch (e) { body.innerHTML = `<div class="alert alert-danger py-2"><i class="bi bi-x-octagon-fill"></i> No se pudo consultar el estado: ${esc(e.message)}</div>` + resumenPerf_(); }
+}
+function resumenPerf_() {
+  const m = {}; PERF.forEach(e => { const x = m[e.op] = m[e.op] || { n: 0, ms: 0, max: 0, err: 0, re: 0 }; x.n++; x.ms += e.ms; x.max = Math.max(x.max, e.ms); if (e.r === 'error') x.err++; x.re += e.re; });
+  const filas = Object.entries(m).sort((a, b) => b[1].n - a[1].n);
+  return filas.length ? '<div class="table-wrap" style="max-height:220px"><table class="table tbl compact"><thead><tr><th>Operación</th><th>Veces</th><th>Prom. ms</th><th>Máx. ms</th><th>Reintentos</th><th>Errores</th></tr></thead><tbody>' + filas.map(([k, x]) => `<tr><td>${esc(k)}</td><td>${x.n}</td><td>${Math.round(x.ms / x.n)}</td><td>${x.max}</td><td>${x.re}</td><td class="${x.err ? 'text-danger fw-bold' : ''}">${x.err}</td></tr>`).join('') + '</tbody></table></div>' : '<div class="hint">Aún sin operaciones en esta sesión</div>';
+}
+// al recuperar la conexión, se vuelve a cargar solo la pantalla visible (sin recargar la página)
+document.addEventListener('talveniq:reconectado', () => {
+  const p = document.querySelector('.pantalla.activa'); if (!p) return;
+  const id = p.id.replace('p-', '');
+  if (id === 'inicio') cargarInicio(); else if (id === 'retornos') cargarRetornos(); else if (id === 'responsables') cargarResp(); else if (id === 'resumen' && fechasSel().length) cargarResumen();
+});
