@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v4.3';
+const APP_VERSION = 'v4.4';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -175,12 +175,13 @@ const TITULOS = {
   resumen: ['Programaciones', 'Lo programado por sector, firmas y correo'],
   retornos: ['Retornos', 'Rutas por retornar, alertas a sectores y estadísticas'],
   listado: ['Consultar registros', 'Búsqueda por cualquier campo, filtros y paginación sobre el total'],
+  historico: ['Histórico', 'Indicadores por año, exportación total y cambios registrados'],
   responsables: ['Responsables', 'Analista y supervisor por fundo'],
   panel: ['Panel de Control', 'Usuarios, roles, permisos, auditoría y sesiones'],
   denegado: ['Acceso denegado', 'No cuentas con autorización para este módulo'],
 };
 // permiso que exige cada módulo (el backend lo vuelve a validar en cada acción)
-const PERM_MODULO = { inicio: 'inicio.ver', dni: 'buscar_trabajador.ver', registro: 'registro_masivo.ver', resumen: 'programaciones.ver', retornos: 'programaciones.ver', listado: 'programaciones.ver', responsables: 'responsables.ver', panel: 'panel.ver' };
+const PERM_MODULO = { inicio: 'inicio.ver', dni: 'buscar_trabajador.ver', registro: 'registro_masivo.ver', resumen: 'programaciones.ver', retornos: 'programaciones.ver', listado: 'programaciones.ver', historico: 'programaciones.ver', responsables: 'responsables.ver', panel: 'panel.ver' };
 let yoAct = null, PERM = {};
 function puede(p) { return !!PERM[p]; }
 function primerModulo() { return Object.keys(PERM_MODULO).find(m => puede(PERM_MODULO[m])) || 'denegado'; }
@@ -201,6 +202,7 @@ function ir(p) {
   if (p === 'responsables') cargarResp();
   if (p === 'retornos') cargarRetornos();
   if (p === 'listado') prepararListado();
+  if (p === 'historico') cargarHistorico();
   if (p === 'registro') cargarCatalogos();
   if (p === 'panel') cargarPanel();
 }
@@ -1515,4 +1517,122 @@ async function modRuta(p) {
     abrirModificar(r.filas.map(f => Number(f.id)));
     $('#modTit').textContent = `· Ruta ${etq}${p.fundo ? ' · ' + p.fundo : ''} (${r.total} suspendidos${r.recortado ? ', se muestran 500' : ''})`;
   } catch (e) { toast(esc(e.message), 'err', 7000); }
+}
+
+
+// ======================================================================
+// v4.4 — HISTÓRICO: indicadores por año, exportación total a Excel y cambios registrados
+// Fuente: copia en Supabase de las pestañas `programacion` y `modificaciones` de Google Sheets.
+// ======================================================================
+const TIPO_MOD_ = { RETORNO_ANTICIPADO: 'Retorno anticipado', CAMBIO_MEDIDA: 'Cambio de medida', AJUSTE_FECHAS: 'Ajuste de fechas' };
+const MESES_ = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Set', 'Oct', 'Nov', 'Dic'];
+const nf_ = n => Number(n || 0).toLocaleString('es-PE');
+let hiAct = null;
+function hiSinBase_(e) {
+  return `<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle-fill"></i> ${e && e.d1 && !e.status ? 'La base de consulta rápida (Supabase) no está disponible. Vuelve a iniciar sesión o inténtalo en unos minutos.' : esc(e.message)}</div>`;
+}
+async function cargarHistorico() {
+  const emp = $('#hiEmp'); if (emp.options.length === 1) Object.keys(window.ORGANIZATION_DISPLAY || {}).forEach(k => emp.insertAdjacentHTML('beforeend', `<option value="${esc(k)}">${esc(orgNombre(k))}</option>`));
+  await ocupado($('#btnHist'), async () => {
+    $('#hiMsg').innerHTML = '';
+    try {
+      const r = await supaRpc_('api_historico', { p: { empresa: $('#hiEmp').value, anio: $('#hiAnio').value } });
+      hiAct = r; pintarHistorico(r);
+    } catch (e) { $('#hiMsg').innerHTML = hiSinBase_(e); }
+  }, 'Cargando…');
+}
+function pintarHistorico(r) {
+  const anios = r.anios.filter(a => a.a !== 'S/F'), sf = r.anios.find(a => a.a === 'S/F');
+  // selects de año (detalle y cambios)
+  const opts = anios.map(a => `<option value="${a.a}">${a.a}</option>`).join('');
+  const selA = $('#hiAnio'), vA = selA.value; selA.innerHTML = '<option value="">Último año</option>' + opts; selA.value = vA;
+  const selM = $('#moAnio'), vM = selM.value; selM.innerHTML = '<option value="">Todos</option>' + opts; selM.value = vM;
+  const ya = anios.find(a => a.a === r.anio) || { registros: 0, finiquitos: 0, suspensiones: 0, sin_efecto: 0, dias_spl: 0, personas: 0, retornos_anticipados: 0 };
+  $('#hiAnioTit').textContent = r.anio; document.querySelectorAll('.hiAnioTx').forEach(x => x.textContent = r.anio);
+  $('#hiKpis').innerHTML = [['Registros en el histórico', nf_(r.total.registros), ''], ['Personas distintas', nf_(r.total.personas), 'gris'],
+    ['Registros ' + r.anio, nf_(ya.registros), ''], ['Finiquitos ' + r.anio, nf_(ya.finiquitos), 'bad'], ['Suspensiones ' + r.anio, nf_(ya.suspensiones), 'amb'],
+    ['Días SPL ' + r.anio, nf_(ya.dias_spl), 'amb'], ['Retornos anticipados ' + r.anio, nf_(ya.retornos_anticipados), ''], ['Cambios registrados (total)', nf_(r.total.modificaciones), 'gris']]
+    .map(([n, v, c]) => `<div class="col-6 col-md-3"><div class="kpi-mini ${c}"><div class="t">${n}</div><div class="n">${v}</div></div></div>`).join('');
+  $('#tHiAnios tbody').innerHTML = anios.map(a => `<tr class="${a.a === r.anio ? 'table-active' : ''}" style="cursor:pointer" onclick="$('#hiAnio').value='${a.a}';cargarHistorico()"><td><b>${a.a}</b></td><td class="text-end">${nf_(a.registros)}</td><td class="text-end">${nf_(a.finiquitos)}</td><td class="text-end">${nf_(a.suspensiones)}</td><td class="text-end">${nf_(a.sin_efecto)}</td><td class="text-end">${nf_(a.dias_spl)}</td><td class="text-end">${nf_(a.personas)}</td><td class="text-end">${nf_(a.retornos_anticipados)}</td><td class="text-end">${nf_(a.cambios_medida)}</td><td class="text-end">${nf_(a.ajustes_fechas)}</td></tr>`).join('')
+    + (sf ? `<tr class="text-muted"><td>Sin fecha doc.</td><td class="text-end">${nf_(sf.registros)}</td><td class="text-end">${nf_(sf.finiquitos)}</td><td class="text-end">${nf_(sf.suspensiones)}</td><td class="text-end">${nf_(sf.sin_efecto)}</td><td class="text-end">${nf_(sf.dias_spl)}</td><td class="text-end">${nf_(sf.personas)}</td><td colspan="3"></td></tr>` : '')
+    || '<tr><td colspan="10" class="empty">Sin registros</td></tr>';
+  const asc = anios.slice().reverse();
+  chart('chHiAnios', { type: 'bar', data: { labels: asc.map(a => a.a), datasets: [
+    { label: 'Finiquitos', data: asc.map(a => a.finiquitos), backgroundColor: COL.danger },
+    { label: 'Suspensiones', data: asc.map(a => a.suspensiones), backgroundColor: COL.gold },
+    { label: 'Sin efecto', data: asc.map(a => a.sin_efecto), backgroundColor: COL.gris }] }, options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+  const pm = {}; r.meses.forEach(m => pm[Number(m.mes)] = m);
+  chart('chHiMeses', { type: 'bar', data: { labels: MESES_, datasets: [
+    { label: 'Finiquitos', data: MESES_.map((_, i) => (pm[i + 1] || {}).finiquitos || 0), backgroundColor: COL.danger },
+    { label: 'Suspensiones', data: MESES_.map((_, i) => (pm[i + 1] || {}).suspensiones || 0), backgroundColor: COL.gold },
+    { label: 'Sin efecto', data: MESES_.map((_, i) => (pm[i + 1] || {}).sin_efecto || 0), backgroundColor: COL.gris }] }, options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+  $('#tHiEmp tbody').innerHTML = r.por_empresa.map(x => `<tr><td><span class="emp-tag">${esc(orgNombre(x.empresa) || '(sin org.)')}</span></td><td class="text-end">${nf_(x.finiquitos)}</td><td class="text-end">${nf_(x.suspensiones)}</td><td class="text-end">${nf_(x.sin_efecto)}</td><td class="text-end">${nf_(x.personas)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+  $('#tHiFundo tbody').innerHTML = r.por_fundo.map(x => `<tr><td><b>${esc(x.fundo)}</b></td><td class="text-end">${nf_(x.finiquitos)}</td><td class="text-end">${nf_(x.suspensiones)}</td><td class="text-end">${nf_(x.sin_efecto)}</td><td class="text-end"><b>${nf_(x.total)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+}
+// --- cambios registrados ---
+function filtrosMods_() { return { q: $('#moQ').value.trim(), tipo: $('#moTipo').value, anio: $('#moAnio').value, empresa: $('#hiEmp').value }; }
+const flecha_ = (a, d) => (a || d) ? (a === d ? dmy(a) : `${dmy(a) || '—'} → <b>${dmy(d) || '—'}</b>`) : '';
+async function cargarModificaciones(pagina) {
+  const p = Object.assign(filtrosMods_(), { pagina: pagina || 1, por: 50 });
+  await ocupado($('#btnMods'), async () => {
+    try {
+      const r = await supaRpc_('api_modificaciones', { p });
+      $('#moTot').innerHTML = [['Cambios', r.total, ''], ['Retornos anticipados', r.totales.retornos_anticipados, 'ok'], ['Cambios de medida', r.totales.cambios_medida, 'bad'], ['Ajustes de fechas', r.totales.ajustes_fechas, 'gris']].map(([t, n, c]) => `<span class="stat-chip ${c}"><b>${nf_(n)}</b> ${t}</span>`).join('');
+      $('#tMods tbody').innerHTML = r.filas.map(x => `<tr><td class="text-nowrap">${esc(String(x.fecha_hora || '').slice(0, 16))}</td><td>${esc(TIPO_MOD_[x.tipo] || x.tipo)}</td><td>${esc(x.dni)}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.fundo_zona)}</td><td>${esc(x.ruta)}</td><td>${esc(x.codigo)}</td><td>${x.estatus_antes === x.estatus_despues ? esc(x.estatus_despues || '') : `${esc(x.estatus_antes || '—')} → <b>${esc(x.estatus_despues || '—')}</b>`}</td><td class="text-nowrap">${flecha_(x.fin_sl_antes, x.fin_sl_despues)}</td><td class="text-nowrap">${flecha_(x.retorno_antes, x.retorno_despues)}</td><td class="text-nowrap">${x.dias_antes === x.dias_despues ? esc(x.dias_despues ?? '') : `${esc(x.dias_antes ?? '—')} → <b>${esc(x.dias_despues ?? '—')}</b>`}</td><td>${esc(x.usuario)}</td><td class="text-wrap" style="min-width:180px;font-size:12px">${esc(x.motivo)}</td></tr>`).join('') || '<tr><td colspan="14" class="empty"><i class="bi bi-inbox"></i>Sin cambios para esos filtros</td></tr>';
+      $('#moPg').innerHTML = r.total ? `<span class="pg-i" style="margin-left:0">Página ${r.pagina} de ${r.paginas}</span><button class="btn btn-sm btn-outline-secondary" ${r.pagina <= 1 ? 'disabled' : ''} onclick="cargarModificaciones(${r.pagina - 1})">‹ Anterior</button><button class="btn btn-sm btn-outline-secondary" ${r.pagina >= r.paginas ? 'disabled' : ''} onclick="cargarModificaciones(${r.pagina + 1})">Siguiente ›</button>` : '';
+    } catch (e) { $('#tMods tbody').innerHTML = `<tr><td colspan="14">${hiSinBase_(e)}</td></tr>`; }
+  }, 'Consultando…');
+}
+$('#moQ') && $('#moQ').addEventListener('keydown', e => { if (e.key === 'Enter') cargarModificaciones(1); });
+// --- Excel (SheetJS se carga solo al exportar) ---
+let XLSX_P_ = null;
+function cargarXLSX_() {
+  if (window.XLSX) return Promise.resolve(window.XLSX);
+  return XLSX_P_ || (XLSX_P_ = new Promise((ok, mal) => { const sc = document.createElement('script'); sc.src = 'https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js'; sc.onload = () => ok(window.XLSX); sc.onerror = () => { XLSX_P_ = null; mal(new Error('No se pudo cargar el generador de Excel (revisa tu conexión)')); }; document.head.appendChild(sc); }));
+}
+const COLS_HIST_ = [['ID', 'id'], ['FECHA DOC.', 'fecha_doc'], ['ESTATUS', 'estatus'], ['DNI', 'dni'], ['NOMBRES Y APELLIDOS', 'nombres'], ['ORGANIZACION', 'empresa'], ['FUNDO / ZONA', 'fundo_zona'], ['RUTA', 'ruta'], ['CODIGO', 'codigo'],
+  ['FUNDO (PLANILLA)', 'fundo'], ['CARGO', 'cargo'], ['ESTADO', 'estado'], ['AÑOS', 'anios'], ['MESES', 'meses'], ['DIAS ANTIG.', 'dias'], ['F. INICIO', 'f_inicio'], ['F. RENOV.', 'f_renovacion'], ['F. TERMINO', 'f_termino'],
+  ['INICIO SL', 'fecha_inicio_sl'], ['FIN SL', 'fecha_fin_sl'], ['RETORNO', 'fecha_retorno'], ['CANT. DIAS', 'cant_dias'], ['ESTADO RETORNO', 'estado_retorno'], ['STATUS 02', 'status02'], ['FECHA FIRMA', 'fecha_firma'], ['SEMANA', 'semana_mes'],
+  ['MES', 'mes'], ['AÑO', 'anio'], ['F. PAGO', 'fecha_pago'], ['OBSERVACION', 'observacion'], ['RESP. SECTOR', 'responsable_sector'], ['APOYOS', 'apoyos'], ['HORARIO FIRMA', 'horario_firma'], ['ORIGEN', 'origen'], ['REGISTRADO', 'creado_en']];
+const NUM_HIST_ = { id: 1, anios: 1, meses: 1, dias: 1, cant_dias: 1, anio: 1 };
+function filaHist_(r) { return COLS_HIST_.map(([, k]) => { const v = r[k]; if (v == null || v === '') return ''; if (NUM_HIST_[k] && /^-?\d+(\.\d+)?$/.test(String(v))) return Number(v); if (k === 'empresa') return orgNombre(v) || v; return v; }); }
+function hojaDe_(X, cab, filas, anchos) { const ws = X.utils.aoa_to_sheet([cab].concat(filas)); ws['!cols'] = (anchos || cab.map(c => ({ wch: Math.max(10, Math.min(40, String(c).length + 4)) }))); ws['!autofilter'] = { ref: ws['!ref'] }; ws['!freeze'] = { xSplit: 0, ySplit: 1 }; return ws; }
+async function filasMods_(extra) { const r = await supaRpc_('api_modificaciones', { p: Object.assign(filtrosMods_(), extra || {}, { exportar: '1' }) }); return r.filas; }
+const CAB_MODS_ = ['FECHA Y HORA', 'TIPO', 'ID REGISTRO', 'DNI', 'NOMBRES', 'ORGANIZACION', 'FUNDO', 'RUTA', 'CODIGO', 'FECHA DOC.', 'MEDIDA ANTES', 'MEDIDA DESPUES', 'INICIO SL ANTES', 'INICIO SL DESPUES', 'FIN SL ANTES', 'FIN SL DESPUES', 'RETORNO ANTES', 'RETORNO DESPUES', 'DIAS ANTES', 'DIAS DESPUES', 'USUARIO', 'MOTIVO'];
+const filaMod_ = x => [x.fecha_hora, TIPO_MOD_[x.tipo] || x.tipo, x.id_registro, x.dni, x.nombres, orgNombre(x.empresa) || x.empresa || '', x.fundo_zona || '', x.ruta || '', x.codigo || '', x.fecha_doc || '', x.estatus_antes || '', x.estatus_despues || '', x.inicio_sl_antes || '', x.inicio_sl_despues || '', x.fin_sl_antes || '', x.fin_sl_despues || '', x.retorno_antes || '', x.retorno_despues || '', x.dias_antes ?? '', x.dias_despues ?? '', x.usuario || '', x.motivo || ''];
+async function exportarHistorico(btn) {
+  const anio = $('#hiAnio').value, emp = $('#hiEmp').value;
+  const alcance = `<div class="row g-2"><div class="col-6"><label class="form-label small">Año</label><select class="form-select" id="exAnio"><option value="">Todos los años</option>${(hiAct ? hiAct.anios : []).filter(a => a.a !== 'S/F').map(a => `<option value="${a.a}" ${a.a === anio ? 'selected' : ''}>${a.a} (${nf_(a.registros)})</option>`).join('')}</select></div><div class="col-6"><label class="form-label small">Medida</label><select class="form-select" id="exEst"><option value="">Todas</option><option>FINIQUITO</option><option>SUSPENSIÓN</option><option>SIN EFECTO</option></select></div></div>`;
+  const c = await confirmar({ titulo: 'Exportar histórico a Excel', btn: 'Exportar', msg: 'Se descargará un Excel con <b>todos los registros</b> del alcance elegido' + (emp ? ' de <b>' + esc(orgNombre(emp)) + '</b>' : '') + ', más una hoja de indicadores por año y otra con los cambios registrados.', extra: alcance });
+  if (!c.ok) return;
+  const p = { anio: ($('#exAnio') || {}).value || '', estatus: ($('#exEst') || {}).value || '', empresa: emp };
+  await ocupado(btn, async () => {
+    try {
+      const X = await cargarXLSX_(); const filas = []; let desde = 0, vuelta = 0;
+      while (true) {
+        const r = await supaRpc_('api_exportar', { p, p_desde_id: desde, p_limite: 5000 });
+        r.filas.forEach(f => filas.push(filaHist_(f))); desde = r.ultimo_id; vuelta++;
+        btn.innerHTML = `<span class="spinner-border spinner-border-sm"></span> ${nf_(filas.length)} registros…`;
+        if (!r.mas || vuelta > 60) break;
+      }
+      const wb = X.utils.book_new();
+      X.utils.book_append_sheet(wb, hojaDe_(X, COLS_HIST_.map(c => c[0]), filas), 'Histórico');
+      if (hiAct) X.utils.book_append_sheet(wb, hojaDe_(X, ['AÑO', 'REGISTROS', 'FINIQUITOS', 'SUSPENSIONES', 'SIN EFECTO', 'DIAS SPL', 'PERSONAS', 'RETORNOS ANTICIPADOS', 'CAMBIOS DE MEDIDA', 'AJUSTES DE FECHAS'],
+        hiAct.anios.map(a => [a.a, a.registros, a.finiquitos, a.suspensiones, a.sin_efecto, Number(a.dias_spl), a.personas, a.retornos_anticipados, a.cambios_medida, a.ajustes_fechas])), 'Indicadores por año');
+      const mods = await filasMods_({ q: '', tipo: '', anio: p.anio });
+      X.utils.book_append_sheet(wb, hojaDe_(X, CAB_MODS_, mods.map(filaMod_)), 'Cambios registrados');
+      X.writeFile(wb, `Historico_Ceses_SPL_${p.anio || 'todos'}${p.estatus ? '_' + p.estatus : ''}_${RQ_.hoy()}.xlsx`, { compression: true });
+      toast(`Excel listo · ${nf_(filas.length)} registros · ${nf_(mods.length)} cambios`);
+    } catch (e) { toast(esc(e.message), 'err', 7000); }
+  }, 'Preparando…');
+}
+async function exportarModificaciones(btn) {
+  await ocupado(btn, async () => {
+    try {
+      const X = await cargarXLSX_(), mods = await filasMods_();
+      const wb = X.utils.book_new(); X.utils.book_append_sheet(wb, hojaDe_(X, CAB_MODS_, mods.map(filaMod_)), 'Cambios registrados');
+      X.writeFile(wb, `Cambios_registrados_${RQ_.hoy()}.xlsx`, { compression: true });
+      toast(`Excel listo · ${nf_(mods.length)} cambios`);
+    } catch (e) { toast(esc(e.message), 'err', 7000); }
+  }, 'Preparando…');
 }

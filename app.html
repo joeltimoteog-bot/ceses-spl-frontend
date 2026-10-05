@@ -447,6 +447,7 @@
     <a href="#resumen" data-p="resumen" title="Programaciones"><i class="bi bi-calendar2-week-fill"></i><span>Programaciones</span></a>
     <a href="#retornos" data-p="retornos" title="Retornos"><i class="bi bi-bus-front-fill"></i><span>Retornos</span></a>
     <a href="#listado" data-p="listado" title="Consultar registros"><i class="bi bi-funnel-fill"></i><span>Consultar registros</span></a>
+    <a href="#historico" data-p="historico" title="Histórico"><i class="bi bi-archive-fill"></i><span>Histórico</span></a>
     <div class="menu-sec">Configuración</div>
     <a href="#responsables" data-p="responsables" title="Responsables"><i class="bi bi-people-fill"></i><span>Responsables</span></a>
     <a href="#panel" data-p="panel" title="Panel de Control" id="mnuPanel"><i class="bi bi-shield-lock-fill"></i><span>Panel de Control</span></a>
@@ -681,6 +682,47 @@
       <div class="d-flex gap-2 align-items-center"><button class="btn btn-sm btn-outline-primary" onclick="pedirRuta()"><i class="bi bi-skip-backward-fill"></i> Modificar una ruta</button><div class="mod-bar" style="display:none;gap:8px;align-items:center"><button class="btn btn-sm btn-primary" onclick="abrirModificar()"><i class="bi bi-pencil-square"></i> Modificar seleccionados (<span class="mod-bar-n">0</span>)</button><button class="btn btn-sm btn-outline-secondary" onclick="modLimpiarSel()">Quitar selección</button></div><select class="form-select form-select-sm" id="lsPor" style="width:auto" onchange="cargarListado(1)"><option>25</option><option selected>50</option><option>100</option></select><span class="hint">por página</span></div></div>
     <div class="table-wrap" style="max-height:60vh;overflow:auto"><table class="table tbl compact" id="tLs"><thead><tr><th style="width:30px"><input type="checkbox" class="form-check-input mod-all" title="Seleccionar la página" onchange="modTodos('ls', this.checked)"></th><th>Fecha Doc.</th><th>DNI</th><th>Nombres</th><th>Org.</th><th>Sector</th><th>Ruta</th><th>Cód.</th><th>Medida</th><th>Estado</th><th>Inicio SL</th><th>Fin SL</th><th>Días</th><th>Retorno</th><th>Est. retorno</th><th>Cód. liq.</th><th>Observación</th><th>Origen</th></tr></thead><tbody><tr><td colspan="18" class="empty"><i class="bi bi-funnel"></i>Define filtros y presiona Consultar</td></tr></tbody></table></div>
     <div class="pg" id="lsPg"></div>
+  </div>
+</section>
+
+<section class="pantalla" id="p-historico">
+  <div class="card p-3 mb-3">
+    <div class="filter-bar">
+      <div><label class="form-label small">Organización</label><select class="form-select" id="hiEmp"><option value="">Todas</option></select></div>
+      <div><label class="form-label small">Año (detalle)</label><select class="form-select" id="hiAnio"><option value="">Último año</option></select></div>
+      <div class="f-actions">
+        <button class="btn btn-primary" id="btnHist" onclick="cargarHistorico()"><i class="bi bi-arrow-repeat"></i> Actualizar</button>
+        <button class="btn btn-outline-success" data-perm="reportes.exportar" onclick="exportarHistorico(this)"><i class="bi bi-file-earmark-excel"></i> Exportar histórico (Excel)</button>
+      </div>
+    </div>
+    <div class="hint mt-2">Todo lo registrado (macro Excel y Registro masivo) se guarda en Google Sheets, pestaña <b>programacion</b>; cada cambio queda en la pestaña <b>modificaciones</b>. Esta vista lee la copia rápida en Supabase.</div>
+  </div>
+  <div id="hiMsg"></div>
+  <div class="row g-3" id="hiKpis"></div>
+  <div class="card p-3 mt-18">
+    <div class="card-h"><h6><i class="bi bi-calendar3"></i> Indicadores por año</h6><span class="hint">Año según Fecha Doc. · Días SPL = suma de días de suspensión</span></div>
+    <div class="table-wrap"><table class="table tbl" id="tHiAnios"><thead><tr><th>Año</th><th class="text-end">Registros</th><th class="text-end">Finiquitos</th><th class="text-end">Suspensiones</th><th class="text-end">Sin efecto</th><th class="text-end">Días SPL</th><th class="text-end">Personas</th><th class="text-end">Retornos anticipados</th><th class="text-end">Cambios de medida</th><th class="text-end">Ajustes de fechas</th></tr></thead><tbody></tbody></table></div>
+  </div>
+  <div class="grid-2 eq mt-18">
+    <div class="card p-3"><h6><i class="bi bi-bar-chart-fill"></i> Por año</h6><div style="height:260px"><canvas id="chHiAnios"></canvas></div></div>
+    <div class="card p-3"><h6><i class="bi bi-graph-up"></i> Por mes · <span id="hiAnioTit"></span></h6><div style="height:260px"><canvas id="chHiMeses"></canvas></div></div>
+  </div>
+  <div class="grid-2 eq mt-18">
+    <div class="card p-3"><h6><i class="bi bi-building"></i> Por organización · <span class="hiAnioTx"></span></h6><div class="table-wrap"><table class="table tbl compact" id="tHiEmp"><thead><tr><th>Organización</th><th class="text-end">Finiq.</th><th class="text-end">Susp.</th><th class="text-end">S/E</th><th class="text-end">Personas</th></tr></thead><tbody></tbody></table></div></div>
+    <div class="card p-3"><h6><i class="bi bi-geo-alt-fill"></i> Fundos con más registros · <span class="hiAnioTx"></span></h6><div class="table-wrap" style="max-height:330px"><table class="table tbl compact" id="tHiFundo"><thead><tr><th>Fundo / Sector</th><th class="text-end">Finiq.</th><th class="text-end">Susp.</th><th class="text-end">S/E</th><th class="text-end">Total</th></tr></thead><tbody></tbody></table></div></div>
+  </div>
+  <div class="card p-3 mt-18">
+    <div class="card-h"><h6><i class="bi bi-skip-backward-fill"></i> Cambios registrados <span class="hint">(retorno anticipado, cambio de medida, ajuste de fechas)</span></h6>
+      <button class="btn btn-sm btn-outline-success" data-perm="reportes.exportar" onclick="exportarModificaciones(this)"><i class="bi bi-file-earmark-excel"></i> Excel de cambios</button></div>
+    <div class="filter-bar mb-2">
+      <div style="min-width:200px;flex:2"><label class="form-label small">Texto (nombre, DNI, usuario, motivo, fundo, ruta)</label><input class="form-control" id="moQ" autocomplete="off"></div>
+      <div><label class="form-label small">Tipo</label><select class="form-select" id="moTipo"><option value="">Todos</option><option value="RETORNO_ANTICIPADO">Retorno anticipado</option><option value="CAMBIO_MEDIDA">Cambio de medida</option><option value="AJUSTE_FECHAS">Ajuste de fechas</option></select></div>
+      <div><label class="form-label small">Año del cambio</label><select class="form-select" id="moAnio"><option value="">Todos</option></select></div>
+      <div class="f-actions"><button class="btn btn-primary" id="btnMods" onclick="cargarModificaciones(1)"><i class="bi bi-search"></i> Consultar</button></div>
+    </div>
+    <div id="moTot" class="d-flex flex-wrap gap-2 mb-2"></div>
+    <div class="table-wrap"><table class="table tbl compact" id="tMods"><thead><tr><th>Fecha y hora</th><th>Tipo</th><th>DNI</th><th>Nombres</th><th>Org.</th><th>Fundo</th><th>Ruta</th><th>Cód.</th><th>Medida</th><th>Fin SL antes → después</th><th>Retorno antes → después</th><th>Días</th><th>Usuario</th><th>Motivo</th></tr></thead><tbody><tr><td colspan="14" class="empty"><i class="bi bi-funnel"></i>Presiona Consultar</td></tr></tbody></table></div>
+    <div class="d-flex gap-2 align-items-center mt-2" id="moPg"></div>
   </div>
 </section>
 
@@ -983,6 +1025,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="config.js?v=4.1"></script>
 <script src="brand.js?v=4.1"></script>
-<script src="app.js?v=4.3"></script>
+<script src="app.js?v=4.4"></script>
 </body>
 </html>
