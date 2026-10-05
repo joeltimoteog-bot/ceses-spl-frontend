@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v4.5';
+const APP_VERSION = 'v4.6';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -248,6 +248,7 @@ async function cargarInicio() {
   try { alertasAct = r0.alertas; pintarAlertasTiles(alertasAct); } catch (e2) { $('#alGrid').innerHTML = `<div class="empty text-danger">${esc(e2.message)}</div>`; }
   const f = r0.fechas;
   pintarRetornosInicio(r0.retornos);
+  try { pintarHoy_(r0); } catch (eH) { console.warn('para hoy', eH); }   // v4.6
   $('#tFechas tbody').innerHTML = f.slice(0, 5).map(x => `<tr><td><b>${dmy(x.fecha_doc)}</b></td><td>${x.n}</td><td>${x.fin}</td><td>${x.sus}</td><td class="text-end"><button class="btn-ico" title="Ver programación" onclick="verFecha('${x.fecha_doc}')"><i class="bi bi-arrow-right"></i></button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin programaciones registradas</td></tr>';
 }
 async function subirExcel(inp) {
@@ -270,7 +271,7 @@ let histAct = [], dniAct = '';
 function excelHistorial() { if (dniAct) descargar({ dni: dniAct }).catch(e => alert(e.message)); }
 async function buscarDNI() {
   const dni = $('#dniIn').value.trim();
-  $('#dniErr').textContent = ''; $('#ficha').innerHTML = ''; $('#tHist tbody').innerHTML = ''; $('#hResumen').innerHTML = ''; $('#hCount').textContent = ''; $('#btnHistXls').style.display = 'none'; const pgH = $('#pgHist'); if (pgH) pgH.innerHTML = '';
+  $('#dniErr').textContent = ''; $('#ficha').innerHTML = ''; $('#lineaTiempo').innerHTML = ''; $('#tHist tbody').innerHTML = ''; $('#hResumen').innerHTML = ''; $('#hCount').textContent = ''; $('#btnHistXls').style.display = 'none'; const pgH = $('#pgHist'); if (pgH) pgH.innerHTML = '';
   if (!dni) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> Ingresa un número de DNI'; return; }
   if (!/^\d{6,12}$/.test(dni)) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> El DNI debe contener solo números'; return; }
   const btnB = $('#btnBuscar'); btnB.classList.add('loading'); btnB.disabled = true;
@@ -299,6 +300,7 @@ async function buscarDNI() {
       </div></div>`;
     histAct = t.historial; dniAct = dni;
     $('#hCount').innerHTML = `(${t.historial.length} registros)` + ((t.fuente === 'd1' || t.fuente === 'supabase') ? ' <span title="Respondido por la base de consulta rápida">⚡</span>' : '');
+    try { pintarLineaTiempo_(t, dni); } catch (eLt) { console.warn('línea de tiempo', eLt); }   // v4.6
     $('#btnHistXls').style.display = t.historial.length ? '' : 'none';
     const totF = t.historial.filter(h => h.estatus === 'FINIQUITO').length, totS = t.historial.filter(h => /^SUSPENSI/.test(h.estatus || '')).length, totSE = t.historial.filter(h => h.estatus === 'SIN EFECTO').length;
     $('#hResumen').innerHTML = t.historial.length ? `<div class="d-flex flex-wrap gap-2 align-items-center">
@@ -1720,4 +1722,75 @@ function verDiaCal(f) {
   $('#calDet').innerHTML = `<div class="card-h"><h6 class="m-0"><i class="bi bi-calendar-check"></i> ${dmy(f)} · ${nf_(F.total)} personas · ${filas.length} ruta(s)</h6>
     <button class="btn btn-sm btn-outline-secondary" onclick='irListado_(${JSON.stringify({ estatus: 'SUSPENSIÓN', retorno_desde: f, retorno_hasta: f })})'><i class="bi bi-list-ul"></i> Ver personas</button></div>
     <div class="table-wrap"><table class="table tbl compact"><thead><tr><th>Fundo / Sector</th><th>Ruta</th><th>Código</th><th>Fin SL</th><th>Organización</th><th class="text-end">Personas</th><th></th></tr></thead><tbody>${filas.join('')}</tbody></table></div>`;
+}
+
+
+// ======================================================================
+// v4.6 — LÍNEA DE TIEMPO DEL TRABAJADOR y AVISO "PARA HOY"
+// ======================================================================
+const umbralSPL_ = () => (alertasAct && alertasAct.parametros && Number(alertasAct.parametros.umbralAcum)) || 75;   // mismo umbral que Alertas laborales (config ALERTAS_ACUM)
+function pintarLineaTiempo_(t, dni) {
+  const box = $('#lineaTiempo'); if (!box) return;
+  const umbral = umbralSPL_(), acum = Number(t.acum_anual) || 0, pct = Math.min(100, acum / umbral * 100), anio = RQ_.hoy().slice(0, 4);
+  const col = acum >= umbral ? 'var(--danger)' : acum >= umbral * 0.8 ? 'var(--warn)' : 'var(--ok)';
+  const aviso = acum >= umbral ? `<span class="st bad"><i class="bi bi-exclamation-octagon-fill"></i> Superó el umbral de ${umbral} días</span>` : acum >= umbral * 0.8 ? `<span class="st warn"><i class="bi bi-exclamation-triangle-fill"></i> Cerca del umbral: le quedan ${umbral - acum} días</span>` : `<span class="st ok"><i class="bi bi-check-circle-fill"></i> Dentro del umbral</span>`;
+  const cls = e => e === 'FINIQUITO' ? 'fin' : /^SUSPENSI/i.test(e || '') ? 'sus' : 'se';
+  const evs = (t.historial || []).map(h => ({ f: h.fecha_inicio_sl || h.fecha_doc || h.fecha_firma || '', tipo: cls(h.estatus), html:
+    `<div class="h"><span>${badgeEst(h.estatus)} <b>${esc(h.fundo_zona || h.fundo || '')}</b>${h.ruta ? ' · Ruta ' + esc(h.ruta) : ''}${h.codigo ? ' · Cód. ' + esc(h.codigo) : ''}</span><span class="text-muted">Doc. ${dmy(h.fecha_doc) || '—'}</span></div>` +
+    `<div class="s">${/^SUSPENSI/i.test(h.estatus || '') ? `SL ${dmy(h.fecha_inicio_sl)} al ${dmy(h.fecha_fin_sl)} · <b>${h.cant_dias ?? '—'} días</b> · retorno ${dmy(h.fecha_retorno) || '—'}` : h.estatus === 'FINIQUITO' ? `Cese${h.fecha_firma ? ' · firma ' + dmy(h.fecha_firma) : ''}` : 'Sin efecto'}${h.estado_retorno ? ' · ' + esc(h.estado_retorno) : ''}${h.observacion ? `<br>${esc(String(h.observacion).slice(0, 220))}` : ''}</div>` }));
+  const pintar = mods => {
+    const todos = evs.concat(mods || []).sort((a, b) => String(b.f).localeCompare(String(a.f)));
+    const n = { sus: 0, fin: 0, mod: 0 }; todos.forEach(e => { if (n[e.tipo] != null) n[e.tipo]++; });
+    let html = '', ya = '';
+    todos.forEach(e => { const y = String(e.f).slice(0, 4) || 'S/F'; if (y !== ya) { html += `${ya ? '</div>' : ''}<div class="lt-anio">${esc(y)}</div><div class="lt">`; ya = y; } html += `<div class="lt-ev ${e.tipo}">${e.html}</div>`; });
+    if (ya) html += '</div>';
+    box.innerHTML = `<div class="card p-3 lt-card"><div class="card-h"><h6><i class="bi bi-clock-history"></i> Línea de tiempo</h6><span class="hint">${todos.length} eventos</span></div>
+      <div class="lt-spl"><div><div class="hint">Suspensión acumulada ${anio}</div><b style="font-size:20px;color:${col}">${acum} / ${umbral} días</b></div><div class="lt-bar" title="${pct.toFixed(0)}%"><i style="width:${pct}%;background:${col}"></i></div>${aviso}</div>
+      <div class="lt-filtros" role="group" aria-label="Filtrar eventos"><button type="button" class="on" data-f="">Todos (${todos.length})</button><button type="button" data-f="solo-sus">Suspensiones (${n.sus})</button><button type="button" data-f="solo-fin">Finiquitos (${n.fin})</button><button type="button" data-f="solo-mod">Cambios (${n.mod})</button></div>
+      <div id="ltCuerpo">${html || '<div class="empty">Sin registros</div>'}</div></div>`;
+    box.querySelectorAll('.lt-filtros button').forEach(b => b.onclick = () => { box.querySelectorAll('.lt-filtros button').forEach(x => x.classList.toggle('on', x === b)); box.querySelectorAll('#ltCuerpo .lt').forEach(l => { l.classList.remove('solo-sus', 'solo-fin', 'solo-mod'); if (b.dataset.f) l.classList.add(b.dataset.f); }); });
+  };
+  pintar([]);
+  // cambios registrados del trabajador (retorno anticipado, cambio de medida, ajuste de fechas)
+  const evMod = x => ({ f: String(x.fecha_hora || '').slice(0, 10), tipo: 'mod', html:
+    `<div class="h"><span><span class="badge bg-primary">${esc(TIPO_MOD_[x.tipo] || x.tipo)}</span> ${x.fundo_zona ? '<b>' + esc(x.fundo_zona) + '</b>' : ''}${x.ruta ? ' · Ruta ' + esc(x.ruta) : ''}</span><span class="text-muted">${esc(String(x.fecha_hora || '').slice(0, 16))} · ${esc(x.usuario || '')}</span></div>` +
+    `<div class="s">${x.retorno_antes || x.retorno_despues ? `Retorno ${dmy(x.retorno_antes) || '—'} → <b>${dmy(x.retorno_despues) || '—'}</b>` : ''}${x.fin_sl_antes || x.fin_sl_despues ? ` · Fin SL ${dmy(x.fin_sl_antes) || '—'} → <b>${dmy(x.fin_sl_despues) || '—'}</b>` : ''}${x.estatus_antes && x.estatus_antes !== x.estatus_despues ? ` · ${esc(x.estatus_antes)} → <b>${esc(x.estatus_despues)}</b>` : ''}${x.dias_antes !== x.dias_despues && (x.dias_antes || x.dias_despues) ? ` · Días ${esc(x.dias_antes ?? '—')} → <b>${esc(x.dias_despues ?? '—')}</b>` : ''}${x.motivo ? `<br>Motivo: ${esc(x.motivo)}` : ''}</div>` });
+  const jp = v => { try { return typeof v === 'string' ? JSON.parse(v) : (v || {}); } catch { return {}; } };
+  supaRpc_('api_modificaciones', { p: { dni: String(dni), por: 100 } }).then(r => r.filas)
+    .catch(() => gas('modificaciones', { dni }).then(l => (l || []).map(m => { const a = jp(m.antes), d = jp(m.despues); return { fecha_hora: m.fecha_hora, usuario: m.usuario, tipo: Object.keys(TIPO_MOD_).find(k => TIPO_MOD_[k] === m.tipo) || m.tipo, motivo: m.motivo, retorno_antes: a.fecha_retorno, retorno_despues: d.fecha_retorno, fin_sl_antes: a.fecha_fin_sl, fin_sl_despues: d.fecha_fin_sl, estatus_antes: a.estatus, estatus_despues: d.estatus, dias_antes: a.cant_dias, dias_despues: d.cant_dias }; })))
+    .then(mods => { if ($('#dniIn').value.trim() === String(dni) && mods && mods.length) pintar(mods.map(evMod)); })
+    .catch(() => {});
+}
+// --- aviso "Para hoy" en Inicio (y ventana una vez al día al entrar) ---
+function pintarHoy_(r0) {
+  const box = $('#hoyBanner'); if (!box) return;
+  const hoy = RQ_.hoy(), man = RQ_.toISO(RQ_.mas(RQ_.iso(hoy), 1));
+  const dia = f => { const F = ((r0.retornos || {}).fechas || []).find(x => x.fecha === f); if (!F) return { p: 0, r: 0 }; let r = 0; F.fundos.forEach(S => r += S.rutas.length); return { p: F.total, r }; };
+  const h = dia(hoy), m = dia(man), a = (r0.alertas || {}).resumen || {}, par = (r0.alertas || {}).parametros || {}, prog = (r0.estado || {}).hoy || 0;
+  const it = (n, txt, sub, ic, c, fn) => n ? `<button type="button" class="hoy-it ${c}" onclick="${fn}"><span class="ic"><i class="bi ${ic}"></i></span><span><b>${nf_(n)}</b> ${txt}<small>${sub}</small></span></button>` : '';
+  const items = [
+    it(h.p, 'retornan hoy', `${h.r} ruta(s) · ver calendario`, 'bi-bus-front-fill', 'b', `irDiaRetorno_('${hoy}')`),
+    it(m.p, 'retornan mañana', `${m.r} ruta(s) · ver calendario`, 'bi-calendar-event', 'b', `irDiaRetorno_('${man}')`),
+    it(a.proximos_indeterminado, 'próximos a indeterminado', `en ${par.diasIndet || 60} días o menos · ver detalle`, 'bi-exclamation-octagon-fill', 'r', 'verAlertas()'),
+    it(a.acumulado_alto, `con ≥ ${par.umbralAcum || 75} días SPL`, 'acumulado del año · ver detalle', 'bi-hourglass-split', 'w', 'verAlertas()'),
+    it(a.firmas_pendientes, 'firmas sin completar', `${a.sectores_firma || 0} sector(es) · ir a Programaciones`, 'bi-pen-fill', 'w', "ir('resumen');location.hash='resumen'"),
+    it(prog, 'programados hoy', 'por Fecha Doc. · ir a Programaciones', 'bi-calendar-check-fill', 'g', "ir('resumen');location.hash='resumen'"),
+  ].filter(Boolean);
+  box.innerHTML = items.length ? `<div class="hint mb-1"><i class="bi bi-lightning-charge-fill" style="color:var(--gold)"></i> <b>Para hoy</b> · ${dmy(hoy)}</div><div class="hoy-ban">${items.join('')}</div>`
+    : `<div class="hoy-ban"><div class="hoy-it g" style="cursor:default"><span class="ic"><i class="bi bi-check2-circle"></i></span><span><b>Todo en orden</b><small>Sin retornos ni alertas urgentes para hoy</small></span></div></div>`;
+  // ventana una vez al día por usuario, solo si hay algo urgente
+  const urgente = h.p || a.proximos_indeterminado || a.acumulado_alto;
+  const clave = 'ceses_parahoy_' + ((yoAct && yoAct.usuario) || '') + '_' + hoy;
+  let visto = false; try { visto = localStorage.getItem(clave) === '1'; } catch {}
+  if (urgente && !visto && items.length) {
+    try { localStorage.setItem(clave, '1'); } catch {}
+    $('#dTit').textContent = 'Para hoy · ' + dmy(hoy);
+    $('#dBody').innerHTML = `<p class="mb-2">Esto requiere tu atención hoy:</p><div class="hoy-ban" style="flex-direction:column">${items.join('')}</div>`;
+    const mod = bootstrap.Modal.getOrCreateInstance('#mDetalle'); mod.show();
+    $('#dBody').querySelectorAll('.hoy-it').forEach(b => b.addEventListener('click', () => mod.hide()));
+  }
+}
+function irDiaRetorno_(f) {
+  ir('retornos'); try { history.replaceState(null, '', '#retornos'); } catch {}
+  CAL_.mes = f.slice(0, 7) + '-01'; CAL_.sel = f; cargarCalendario();
 }

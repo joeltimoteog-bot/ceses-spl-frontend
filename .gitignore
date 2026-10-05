@@ -5,3 +5,4 @@ api/.wrangler/
 api/.dev.vars
 supabase/02-clave.sql
 supabase/02-clave.sql
+supabase/02-clave.sql

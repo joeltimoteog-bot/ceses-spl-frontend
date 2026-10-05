@@ -440,6 +440,27 @@
   .cal .d.osc{color:#fff}
   .cal-ley{display:flex;align-items:center;gap:6px;font-size:11.5px;color:var(--muted)}.cal-ley i{display:inline-block;width:18px;height:10px;border-radius:3px}
   @media (max-width:600px){.cal{gap:3px}.cal .d{min-height:48px;padding:4px}.cal .d .cnt{font-size:14px}.cal .d .rt{display:none}}
+  /* v4.6: línea de tiempo del trabajador y aviso "Para hoy" */
+  .lt-card{margin-top:14px}
+  .lt-spl{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin-bottom:12px}
+  .lt-bar{flex:1;min-width:200px;height:12px;border-radius:8px;background:#eef1f5;overflow:hidden;position:relative}
+  .lt-bar>i{display:block;height:100%;border-radius:8px}
+  .lt-filtros{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+  .lt-filtros button{border:1px solid var(--line);background:#fff;border-radius:20px;padding:3px 12px;font-size:12px;font-weight:600;color:var(--ink)}
+  .lt-filtros button.on{background:var(--navy);border-color:var(--navy);color:#fff}
+  .lt-anio{font-size:12px;font-weight:800;color:var(--navy);margin:12px 0 6px;letter-spacing:.5px}
+  .lt{position:relative;margin-left:10px;padding-left:22px;border-left:2px solid var(--line)}
+  .lt-ev{position:relative;margin-bottom:10px;padding:8px 12px;border-radius:10px;background:#fff;border:1px solid var(--line)}
+  .lt-ev::before{content:"";position:absolute;left:-30px;top:12px;width:14px;height:14px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 2px var(--line);background:#8a97a8}
+  .lt-ev.fin::before{background:var(--danger)}.lt-ev.sus::before{background:var(--gold)}.lt-ev.se::before{background:#8a97a8}.lt-ev.mod::before{background:var(--blue)}
+  .lt-ev.mod{background:#f3f7fe;border-color:#cfe0fb}
+  .lt-ev .h{display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:13px}.lt-ev .s{font-size:12px;color:var(--muted);margin-top:2px}
+  .lt.solo-sus .lt-ev:not(.sus),.lt.solo-fin .lt-ev:not(.fin),.lt.solo-mod .lt-ev:not(.mod){display:none}
+  .hoy-ban{display:flex;gap:10px;flex-wrap:wrap;align-items:stretch;margin-bottom:14px}
+  .hoy-it{flex:1;min-width:190px;display:flex;align-items:center;gap:10px;padding:10px 12px;border-radius:12px;background:#fff;border:1px solid var(--line);box-shadow:var(--shadow);text-align:left;font:inherit;color:var(--ink);cursor:pointer;transition:transform .15s}
+  .hoy-it:hover{transform:translateY(-2px)}.hoy-it .ic{width:36px;height:36px;border-radius:10px;display:grid;place-items:center;font-size:17px;flex-shrink:0}
+  .hoy-it b{font-size:18px;color:var(--navy)}.hoy-it small{display:block;color:var(--muted);font-size:11.5px;line-height:1.25}
+  .hoy-it.r .ic{background:var(--danger-bg);color:var(--danger)}.hoy-it.b .ic{background:var(--info-bg);color:var(--blue)}.hoy-it.w .ic{background:var(--warn-bg);color:var(--warn)}.hoy-it.g .ic{background:var(--ok-bg);color:var(--ok)}
 </style>
 </head>
 <body>
@@ -495,6 +516,7 @@
 
 <!-- ================= INICIO ================= -->
 <section class="pantalla activa" id="p-inicio">
+  <div id="hoyBanner"></div>
   <div class="kpi-grid" id="kpis"></div>
 
   <div class="grid-2 eq mt-18">
@@ -568,6 +590,7 @@
   </div>
 
   <div id="ficha"></div>
+  <div id="lineaTiempo"></div>
 
   <div class="card p-3 mt-18">
     <div class="card-h">
@@ -1058,6 +1081,6 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <script src="config.js?v=4.1"></script>
 <script src="brand.js?v=4.1"></script>
-<script src="app.js?v=4.5"></script>
+<script src="app.js?v=4.6"></script>
 </body>
 </html>
