@@ -167,4 +167,8 @@ end $$;
 revoke all on function public.api_historico(text, jsonb), public.api_exportar(text, jsonb, bigint, int), public.api_modificaciones(text, jsonb) from public;
 grant execute on function public.api_historico(text, jsonb), public.api_exportar(text, jsonb, bigint, int), public.api_modificaciones(text, jsonb) to anon, authenticated;
 
+-- Apps Script escribe con la clave secreta (rol service_role) y la API debe "ver" la tabla nueva
+grant all on table public.modificaciones to service_role;
+notify pgrst, 'reload schema';
+
 -- Listo. Apps Script (v4.4) copiará la hoja `modificaciones` en la próxima sincronización.
