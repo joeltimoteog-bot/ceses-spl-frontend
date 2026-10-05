@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v4.4';
+const APP_VERSION = 'v4.5';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -200,7 +200,7 @@ function ir(p) {
   window.scrollTo({ top: 0 });
   if (p === 'inicio') cargarInicio();
   if (p === 'responsables') cargarResp();
-  if (p === 'retornos') cargarRetornos();
+  if (p === 'retornos') { cargarRetornos(); cargarCalendario(); }
   if (p === 'listado') prepararListado();
   if (p === 'historico') cargarHistorico();
   if (p === 'registro') cargarCatalogos();
@@ -1550,24 +1550,29 @@ function pintarHistorico(r) {
   const ya = anios.find(a => a.a === r.anio) || { registros: 0, finiquitos: 0, suspensiones: 0, sin_efecto: 0, dias_spl: 0, personas: 0, retornos_anticipados: 0 };
   $('#hiAnioTit').textContent = r.anio; document.querySelectorAll('.hiAnioTx').forEach(x => x.textContent = r.anio);
   $('#hiKpis').innerHTML = [['Registros en el histórico', nf_(r.total.registros), ''], ['Personas distintas', nf_(r.total.personas), 'gris'],
-    ['Registros ' + r.anio, nf_(ya.registros), ''], ['Finiquitos ' + r.anio, nf_(ya.finiquitos), 'bad'], ['Suspensiones ' + r.anio, nf_(ya.suspensiones), 'amb'],
+    ['Registros ' + r.anio, nf_(ya.registros), ''], ['Finiquitos ' + r.anio, nf_(ya.finiquitos), 'rojo'], ['Suspensiones ' + r.anio, nf_(ya.suspensiones), 'amb'],
     ['Días SPL ' + r.anio, nf_(ya.dias_spl), 'amb'], ['Retornos anticipados ' + r.anio, nf_(ya.retornos_anticipados), ''], ['Cambios registrados (total)', nf_(r.total.modificaciones), 'gris']]
     .map(([n, v, c]) => `<div class="col-6 col-md-3"><div class="kpi-mini ${c}"><div class="t">${n}</div><div class="n">${v}</div></div></div>`).join('');
   $('#tHiAnios tbody').innerHTML = anios.map(a => `<tr class="${a.a === r.anio ? 'table-active' : ''}" style="cursor:pointer" onclick="$('#hiAnio').value='${a.a}';cargarHistorico()"><td><b>${a.a}</b></td><td class="text-end">${nf_(a.registros)}</td><td class="text-end">${nf_(a.finiquitos)}</td><td class="text-end">${nf_(a.suspensiones)}</td><td class="text-end">${nf_(a.sin_efecto)}</td><td class="text-end">${nf_(a.dias_spl)}</td><td class="text-end">${nf_(a.personas)}</td><td class="text-end">${nf_(a.retornos_anticipados)}</td><td class="text-end">${nf_(a.cambios_medida)}</td><td class="text-end">${nf_(a.ajustes_fechas)}</td></tr>`).join('')
     + (sf ? `<tr class="text-muted"><td>Sin fecha doc.</td><td class="text-end">${nf_(sf.registros)}</td><td class="text-end">${nf_(sf.finiquitos)}</td><td class="text-end">${nf_(sf.suspensiones)}</td><td class="text-end">${nf_(sf.sin_efecto)}</td><td class="text-end">${nf_(sf.dias_spl)}</td><td class="text-end">${nf_(sf.personas)}</td><td colspan="3"></td></tr>` : '')
     || '<tr><td colspan="10" class="empty">Sin registros</td></tr>';
   const asc = anios.slice().reverse();
-  chart('chHiAnios', { type: 'bar', data: { labels: asc.map(a => a.a), datasets: [
+  const EST_ = ['FINIQUITO', 'SUSPENSIÓN', 'SIN EFECTO'], emp = $('#hiEmp').value;
+  const clicGraf_ = fn => ({ onClick: (ev, els) => { if (els && els.length) fn(els[0].index, els[0].datasetIndex); }, onHover: (ev, els) => { if (ev.native && ev.native.target) ev.native.target.style.cursor = els && els.length ? 'pointer' : 'default'; } });
+  chart('chHiAnios', { type: 'bar', options: Object.assign({ scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }, clicGraf_((i, d) => irListado_({ empresa: emp, estatus: EST_[d], desde: asc[i].a + '-01-01', hasta: asc[i].a + '-12-31' }))), data: { labels: asc.map(a => a.a), datasets: [
     { label: 'Finiquitos', data: asc.map(a => a.finiquitos), backgroundColor: COL.danger },
     { label: 'Suspensiones', data: asc.map(a => a.suspensiones), backgroundColor: COL.gold },
-    { label: 'Sin efecto', data: asc.map(a => a.sin_efecto), backgroundColor: COL.gris }] }, options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
+    { label: 'Sin efecto', data: asc.map(a => a.sin_efecto), backgroundColor: COL.gris }] } });
   const pm = {}; r.meses.forEach(m => pm[Number(m.mes)] = m);
-  chart('chHiMeses', { type: 'bar', data: { labels: MESES_, datasets: [
+  const finMes_ = (y, m) => new Date(Date.UTC(+y, m, 0)).toISOString().slice(0, 10);
+  chart('chHiMeses', { type: 'bar', options: Object.assign({ scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } }, clicGraf_((i, d) => irListado_({ empresa: emp, estatus: EST_[d], desde: `${r.anio}-${String(i + 1).padStart(2, '0')}-01`, hasta: finMes_(r.anio, i + 1) }))), data: { labels: MESES_, datasets: [
     { label: 'Finiquitos', data: MESES_.map((_, i) => (pm[i + 1] || {}).finiquitos || 0), backgroundColor: COL.danger },
     { label: 'Suspensiones', data: MESES_.map((_, i) => (pm[i + 1] || {}).suspensiones || 0), backgroundColor: COL.gold },
-    { label: 'Sin efecto', data: MESES_.map((_, i) => (pm[i + 1] || {}).sin_efecto || 0), backgroundColor: COL.gris }] }, options: { scales: { x: { stacked: true }, y: { stacked: true, beginAtZero: true } } } });
-  $('#tHiEmp tbody').innerHTML = r.por_empresa.map(x => `<tr><td><span class="emp-tag">${esc(orgNombre(x.empresa) || '(sin org.)')}</span></td><td class="text-end">${nf_(x.finiquitos)}</td><td class="text-end">${nf_(x.suspensiones)}</td><td class="text-end">${nf_(x.sin_efecto)}</td><td class="text-end">${nf_(x.personas)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
-  $('#tHiFundo tbody').innerHTML = r.por_fundo.map(x => `<tr><td><b>${esc(x.fundo)}</b></td><td class="text-end">${nf_(x.finiquitos)}</td><td class="text-end">${nf_(x.suspensiones)}</td><td class="text-end">${nf_(x.sin_efecto)}</td><td class="text-end"><b>${nf_(x.total)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+    { label: 'Sin efecto', data: MESES_.map((_, i) => (pm[i + 1] || {}).sin_efecto || 0), backgroundColor: COL.gris }] } });
+  pintarComparativo_(r, pm);
+  const rango_ = { desde: r.anio + '-01-01', hasta: r.anio + '-12-31' };
+  $('#tHiEmp tbody').innerHTML = r.por_empresa.map(x => `<tr class="clicable" onclick='irListado_(${JSON.stringify(Object.assign({ empresa: x.empresa }, rango_)).replace(/'/g, '&#39;')})'><td><span class="emp-tag">${esc(orgNombre(x.empresa) || '(sin org.)')}</span></td><td class="text-end">${nf_(x.finiquitos)}</td><td class="text-end">${nf_(x.suspensiones)}</td><td class="text-end">${nf_(x.sin_efecto)}</td><td class="text-end">${nf_(x.personas)}</td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
+  $('#tHiFundo tbody').innerHTML = r.por_fundo.map(x => `<tr class="clicable" onclick='irListado_(${JSON.stringify(Object.assign({ empresa: emp, fundo: x.fundo === '(SIN FUNDO)' ? '' : x.fundo }, rango_)).replace(/'/g, '&#39;')})'><td><b>${esc(x.fundo)}</b></td><td class="text-end">${nf_(x.finiquitos)}</td><td class="text-end">${nf_(x.suspensiones)}</td><td class="text-end">${nf_(x.sin_efecto)}</td><td class="text-end"><b>${nf_(x.total)}</b></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Sin datos</td></tr>';
 }
 // --- cambios registrados ---
 function filtrosMods_() { return { q: $('#moQ').value.trim(), tipo: $('#moTipo').value, anio: $('#moAnio').value, empresa: $('#hiEmp').value }; }
@@ -1635,4 +1640,84 @@ async function exportarModificaciones(btn) {
       toast(`Excel listo · ${nf_(mods.length)} cambios`);
     } catch (e) { toast(esc(e.message), 'err', 7000); }
   }, 'Preparando…');
+}
+
+
+// ======================================================================
+// v4.5 — INTERACTIVO: clic en gráficos → lista nominal, comparativo año contra año, calendario de retornos
+// ======================================================================
+// Abre "Consultar registros" con los filtros ya puestos y consulta al instante
+function irListado_(f) {
+  ir('listado'); try { history.replaceState(null, '', '#listado'); } catch {}
+  const set = (id, v) => { const el = $(id); if (el) el.value = v || ''; };
+  ['#lsQ', '#lsEmp', '#lsEst', '#lsFundo', '#lsRuta', '#lsEstado', '#lsRet', '#lsDesde', '#lsHasta', '#lsRetDesde', '#lsRetHasta'].forEach(id => set(id, ''));
+  set('#lsEmp', f.empresa); set('#lsEst', f.estatus); set('#lsFundo', f.fundo); set('#lsRuta', f.ruta);
+  set('#lsDesde', f.desde); set('#lsHasta', f.hasta); set('#lsRetDesde', f.retorno_desde); set('#lsRetHasta', f.retorno_hasta);
+  setTimeout(() => cargarListado(1), 50);
+}
+// --- comparativo año contra año (mismo periodo: si es el año en curso, solo hasta el mes actual) ---
+function pintarComparativo_(r, pm) {
+  const ap = r.anio_prev; const box = $('#hiVar');
+  if (!ap) { box.innerHTML = ''; $('#hiCompTit').textContent = ''; return; }
+  const pp = {}; (r.meses_prev || []).forEach(m => pp[Number(m.mes)] = m);
+  const hoy = RQ_.hoy(), enCurso = r.anio === hoy.slice(0, 4), hastaMes = enCurso ? Number(hoy.slice(5, 7)) : 12;
+  const suma = (src, k) => { let t = 0; for (let i = 1; i <= hastaMes; i++) { const m = src[i] || {}; t += k === 'registros' ? (m.finiquitos || 0) + (m.suspensiones || 0) + (m.sin_efecto || 0) : Number(m[k] || 0); } return t; };
+  $('#hiCompTit').textContent = `${r.anio} vs ${ap}`;
+  $('#hiCompNota').textContent = enCurso ? `Mismo periodo: enero a ${MESES_[hastaMes - 1].toLowerCase()} de cada año` : 'Año completo';
+  const varChip = (a, b) => { if (!b) return a ? '<span class="var up">nuevo</span>' : '<span class="var eq">sin datos previos</span>'; const p = (a - b) / b * 100; return `<span class="var ${Math.abs(p) < 0.5 ? 'eq' : p > 0 ? 'up' : 'down'}">${p > 0 ? '▲' : p < 0 ? '▼' : '='} ${Math.abs(p).toFixed(1)}% vs ${ap}</span>`; };
+  box.innerHTML = [['Registros', 'registros', ''], ['Finiquitos', 'finiquitos', 'rojo'], ['Suspensiones', 'suspensiones', 'amb'], ['Días SPL', 'dias_spl', 'amb']].map(([t, k, c]) => {
+    const a = suma(pm, k), b = suma(pp, k);
+    return `<div class="col-6 col-md-3"><div class="kpi-mini ${c}"><div class="t">${t} ${r.anio}</div><div class="n">${nf_(a)}</div><div class="hint">${ap}: ${nf_(b)}</div>${varChip(a, b)}</div></div>`;
+  }).join('');
+  const tot = (src, i) => { const m = src[i + 1] || {}; return (m.finiquitos || 0) + (m.suspensiones || 0) + (m.sin_efecto || 0); };
+  chart('chHiComp', { type: 'line', data: { labels: MESES_, datasets: [
+    { label: 'Registros ' + r.anio, data: MESES_.map((_, i) => enCurso && i + 1 > hastaMes ? null : tot(pm, i)), borderColor: COL.navy, backgroundColor: COL.navy, tension: .3, borderWidth: 3, pointRadius: 4 },
+    { label: 'Registros ' + ap, data: MESES_.map((_, i) => tot(pp, i)), borderColor: COL.gris, backgroundColor: COL.gris, borderDash: [6, 4], tension: .3, borderWidth: 2, pointRadius: 3 },
+    { label: 'Finiquitos ' + r.anio, data: MESES_.map((_, i) => enCurso && i + 1 > hastaMes ? null : (pm[i + 1] || {}).finiquitos || 0), borderColor: COL.danger, backgroundColor: COL.danger, tension: .3, borderWidth: 2, pointRadius: 3 },
+    { label: 'Finiquitos ' + ap, data: MESES_.map((_, i) => (pp[i + 1] || {}).finiquitos || 0), borderColor: '#e9a3a3', backgroundColor: '#e9a3a3', borderDash: [6, 4], tension: .3, borderWidth: 2, pointRadius: 2 }] },
+    options: { interaction: { mode: 'index', intersect: false }, scales: { y: { beginAtZero: true } } } });
+}
+// --- calendario de retornos (mapa de calor) ---
+let CAL_ = { mes: null, datos: null, sel: null };
+function moverCal(n) {
+  const h = RQ_.hoy(); if (!CAL_.mes || n === 0) CAL_.mes = h.slice(0, 7) + '-01';
+  if (n) { const d = RQ_.iso(CAL_.mes); CAL_.mes = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth() + n, 1)).toISOString().slice(0, 10); }
+  CAL_.sel = null; cargarCalendario();
+}
+async function cargarCalendario() {
+  if (!CAL_.mes) CAL_.mes = RQ_.hoy().slice(0, 7) + '-01';
+  const d0 = RQ_.iso(CAL_.mes), nDias = new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth() + 1, 0)).getUTCDate();
+  $('#calTit').textContent = MESES_[d0.getUTCMonth()] + ' ' + d0.getUTCFullYear();
+  const p = { desde: CAL_.mes, dias: nDias - 1, detalle: false }, mesPedido = CAL_.mes;
+  try {
+    const r = await rapida('retornos', p).catch(() => gas('retornos', p));
+    if (mesPedido !== CAL_.mes) return;   // el usuario ya cambió de mes
+    CAL_.datos = r; pintarCalendario_(r, d0, nDias);
+    if (CAL_.sel) verDiaCal(CAL_.sel);
+  } catch (e) { $('#calRet').innerHTML = `<div class="empty" style="grid-column:1/-1">${esc(e.message)}</div>`; }
+}
+function pintarCalendario_(r, d0, nDias) {
+  const porDia = {}; r.fechas.forEach(F => { let rutas = 0; F.fundos.forEach(S => rutas += S.rutas.length); porDia[F.fecha] = { total: F.total, rutas }; });
+  const max = Math.max(1, ...Object.values(porDia).map(x => x.total)), hoy = RQ_.hoy();
+  const ini = (d0.getUTCDay() + 6) % 7;   // lunes = 0
+  let h = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'].map(x => `<div class="dw">${x}</div>`).join('');
+  for (let i = 0; i < ini; i++) h += '<div class="d vacio"></div>';
+  for (let dd = 1; dd <= nDias; dd++) {
+    const f = RQ_.toISO(new Date(Date.UTC(d0.getUTCFullYear(), d0.getUTCMonth(), dd))), x = porDia[f];
+    const cls = (f === hoy ? ' hoy' : '') + (f === CAL_.sel ? ' sel' : '');
+    if (!x) { h += `<div class="d${cls}"><span class="num">${dd}</span></div>`; continue; }
+    const t = x.total / max, osc = t > 0.55, bg = t > 0.85 ? 'rgba(11,46,91,.95)' : `rgba(31,111,232,${(0.12 + 0.68 * t).toFixed(2)})`;
+    h += `<button type="button" class="d${cls}${osc ? ' osc' : ''}" style="background:${bg}" onclick="verDiaCal('${f}')" aria-label="${dmy(f)}: ${x.total} personas en ${x.rutas} rutas"><span class="num">${dd}</span><span class="cnt">${nf_(x.total)}</span><span class="rt">${x.rutas} ruta${x.rutas === 1 ? '' : 's'}</span></button>`;
+  }
+  $('#calRet').innerHTML = h;
+  const tot = r.resumen || {}; $('#calDet').innerHTML = CAL_.sel ? $('#calDet').innerHTML : `<div class="hint"><b>${nf_(tot.personas || 0)}</b> personas retornan en el mes, en <b>${nf_(tot.fechas || 0)}</b> días. Haz clic en un día para ver sus rutas y carros.</div>`;
+}
+function verDiaCal(f) {
+  CAL_.sel = f; document.querySelectorAll('#calRet .d').forEach(b => b.classList.toggle('sel', (b.getAttribute('onclick') || '').indexOf(f) >= 0));
+  const F = ((CAL_.datos || {}).fechas || []).find(x => x.fecha === f);
+  if (!F) { $('#calDet').innerHTML = `<div class="hint">Sin retornos el ${dmy(f)}.</div>`; return; }
+  const filas = []; F.fundos.forEach(S => S.rutas.forEach(x => filas.push(`<tr><td><b>${esc(S.fundo)}</b></td><td>${esc(x.ruta)}</td><td>${esc(x.codigo)}</td><td>${dmy(x.fin_sl)}</td><td>${orgChips(x.empresas)}</td><td class="text-end"><b>${x.cant}</b></td><td class="text-end text-nowrap">${modPuede_() ? `<button class="btn btn-sm btn-outline-primary" title="Modificar solo esta ruta / código (un carro)" onclick='modRuta(${JSON.stringify({ ruta: x.ruta, codigo: x.codigo || '', fundo: S.fundo, fecha_retorno: f }).replace(/'/g, '&#39;')})'><i class="bi bi-skip-backward-fill"></i> Ruta</button>` : ''}</td></tr>`)));
+  $('#calDet').innerHTML = `<div class="card-h"><h6 class="m-0"><i class="bi bi-calendar-check"></i> ${dmy(f)} · ${nf_(F.total)} personas · ${filas.length} ruta(s)</h6>
+    <button class="btn btn-sm btn-outline-secondary" onclick='irListado_(${JSON.stringify({ estatus: 'SUSPENSIÓN', retorno_desde: f, retorno_hasta: f })})'><i class="bi bi-list-ul"></i> Ver personas</button></div>
+    <div class="table-wrap"><table class="table tbl compact"><thead><tr><th>Fundo / Sector</th><th>Ruta</th><th>Código</th><th>Fin SL</th><th>Organización</th><th class="text-end">Personas</th><th></th></tr></thead><tbody>${filas.join('')}</tbody></table></div>`;
 }
