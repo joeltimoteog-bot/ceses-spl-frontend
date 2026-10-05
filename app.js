@@ -1,5 +1,5 @@
 'use strict';
-const APP_VERSION = 'v4.1';
+const APP_VERSION = 'v4.3';
 // ======================================================
 // TALVENIQ · Plataforma de Gestión Humana — frontend (módulo Ceses / SPL)
 // ======================================================
@@ -22,6 +22,7 @@ const pistaHtml = txt => txt.replace(/<script[\s\S]*?<\/script>/gi, ' ').replace
 // Ahora: timeout controlado, hasta 3 intentos con espera progresiva (0 s → 2 s → 5 s), reconexión por GET si el
 // proxy bloquea POST, estados de conexión visibles (🟢🟡🟠🔴), mensajes amigables y telemetría de tiempos.
 // ======================================================
+const D1_ACTIVO = false;   // v4.2: Cloudflare D1 desactivado. v4.3: las consultas rápidas van a Supabase (rapida()), con respaldo en Apps Script
 const D1 = { sesion: null, fallas: 0, apagadoHasta: 0 };   // v4.0: sesión del API de consulta rápida (se llena en el arranque)
 const NET = { estado: 'ok', enVuelo: 0, fallasSeguidas: 0, ultimoOk: Date.now(), sonda: null, ultimoTecnico: '' };
 const NET_TIMEOUT_MS = 45000, NET_ESPERAS = [0, 2000, 5000];   // 3 intentos
@@ -272,7 +273,7 @@ async function buscarDNI() {
   if (!/^\d{6,12}$/.test(dni)) { $('#dniErr').innerHTML = '<i class="bi bi-exclamation-circle"></i> El DNI debe contener solo números'; return; }
   const btnB = $('#btnBuscar'); btnB.classList.add('loading'); btnB.disabled = true;
   try {
-    const t = await cacheGet('trab:' + dni, () => d1Get('/trabajador/' + dni).catch(() => api('/api/trabajador/' + dni)));   // v4.0: base de consulta (D1) con respaldo en GAS
+    const t = await cacheGet('trab:' + dni, () => rapida('trabajador', { dni }).catch(() => api('/api/trabajador/' + dni)));   // v4.3: Supabase con respaldo en GAS
     const a = t.antiguedad;
     const estCls = t.estado === 'INDETERMINADO' ? 'danger' : t.estado === 'PERIODO DE PRUEBA' ? 'info' : '';
     const aviso = t.en_base ? '' : `<div class="alert alert-warning py-2 small mb-3"><i class="bi bi-exclamation-triangle-fill"></i> <b>No está en la base activa de las organizaciones</b> (cesado o no vigente). Último registro: ${badgeEst(t.ultimo_estatus)} ${dmy(t.ultimo_registro)}. Ficha tomada de su historial.</div>`;
@@ -295,7 +296,7 @@ async function buscarDNI() {
         ${item('Base actualizada', esc(t.sincronizado_en || '—'), 'bi-database-fill-check', 'span2')}
       </div></div>`;
     histAct = t.historial; dniAct = dni;
-    $('#hCount').innerHTML = `(${t.historial.length} registros)` + (t.fuente === 'd1' ? ' <span title="Respondido por la base de consulta rápida">⚡</span>' : '');
+    $('#hCount').innerHTML = `(${t.historial.length} registros)` + ((t.fuente === 'd1' || t.fuente === 'supabase') ? ' <span title="Respondido por la base de consulta rápida">⚡</span>' : '');
     $('#btnHistXls').style.display = t.historial.length ? '' : 'none';
     const totF = t.historial.filter(h => h.estatus === 'FINIQUITO').length, totS = t.historial.filter(h => /^SUSPENSI/.test(h.estatus || '')).length, totSE = t.historial.filter(h => h.estatus === 'SIN EFECTO').length;
     $('#hResumen').innerHTML = t.historial.length ? `<div class="d-flex flex-wrap gap-2 align-items-center">
@@ -1019,7 +1020,7 @@ function pintarRetornosInicio(r) {
   if (!r.fechas.length) { box.innerHTML = `<div class="empty"><i class="bi bi-check2-circle"></i> Sin rutas por retornar en los próximos ${r.dias} día(s)</div>`; return; }
   const chips = `<div class="d-flex flex-wrap gap-2 mb-2"><span class="stat-chip ok"><b>${r.resumen.personas}</b> personas</span><span class="stat-chip"><b>${r.resumen.rutas}</b> rutas</span><span class="stat-chip"><b>${r.resumen.fundos}</b> fundos / sectores</span></div>`;
   box.innerHTML = chips + `<div class="table-wrap"><table class="table tbl compact"><thead><tr><th>Fecha retorno</th><th>Fundo / Sector</th><th>Rutas</th><th class="text-end">Personas</th></tr></thead><tbody>` +
-    r.fechas.map(F => F.fundos.map((S, i) => `<tr>${i === 0 ? `<td rowspan="${F.fundos.length}"><b>${dmy(F.fecha)}</b><div class="hint">${F.total} pers.</div></td>` : ''}<td><b>${esc(S.fundo)}</b></td><td class="text-wrap">${S.rutas.map(x => `${esc(x.ruta)} <span class="text-muted">(${x.cant})</span>`).join(', ')}</td><td class="text-end"><b>${S.total}</b></td></tr>`).join('')).join('') + '</tbody></table></div>';
+    r.fechas.map(F => F.fundos.map((S, i) => `<tr>${i === 0 ? `<td rowspan="${F.fundos.length}"><b>${dmy(F.fecha)}</b><div class="hint">${F.total} pers.</div></td>` : ''}<td><b>${esc(S.fundo)}</b></td><td class="text-wrap">${S.rutas.map(x => `${esc(x.ruta)}${x.codigo ? ' · ' + esc(x.codigo) : ''} <span class="text-muted">(${x.cant})</span>`).join(', ')}</td><td class="text-end"><b>${S.total}</b></td></tr>`).join('')).join('') + '</tbody></table></div>';
 }
 let retAct = null;
 function rtParams() {
@@ -1036,7 +1037,7 @@ async function cargarRetornos() {
   $('#rtMsg').innerHTML = '';
   try {
     const p = rtParams(); p.detalle = puede('buscar_trabajador.ver');
-    const [r, st] = await Promise.all([gas('retornos', p), gas('estadisticas')]);
+    const [r, st] = await Promise.all([rapida('retornos', p).catch(() => gas('retornos', p)), gas('estadisticas')]);   // v4.3: retornos desde Supabase
     retAct = r; pintarRetornos(r); pintarEstadisticas(st);
   } catch (e) { $('#rtMsg').innerHTML = `<div class="alert alert-danger py-2"><i class="bi bi-x-octagon-fill"></i> ${esc(e.message)}</div>`; }
   btn.disabled = false; btn.innerHTML = '<i class="bi bi-search"></i> Consultar';
@@ -1046,12 +1047,12 @@ function pintarRetornos(r) {
   $('#rtKpis').innerHTML = [['Personas por retornar', r.resumen.personas, ''], ['Rutas', r.resumen.rutas, 'amb'], ['Fundos / sectores', r.resumen.fundos, 'gris'], ['Fechas de retorno', r.resumen.fechas, '']]
     .map(([n, v, c]) => `<div class="col-6 col-md-3"><div class="kpi-mini ${c}"><div class="t">${n}</div><div class="n">${v}</div></div></div>`).join('');
   const filas = [];
-  r.fechas.forEach(F => { F.fundos.forEach(S => S.rutas.forEach(x => filas.push(`<tr><td><b>${dmy(F.fecha)}</b></td><td><b>${esc(S.fundo)}</b></td><td>${esc(x.ruta)}</td><td>${esc(x.codigo)}</td><td>${dmy(x.fin_sl)}</td><td>${orgChips(x.empresas)}</td><td>${esc(x.estado_retorno)}</td><td class="text-end"><b>${x.cant}</b></td><td class="text-end">${modPuede_() ? `<button class="btn btn-sm btn-outline-primary text-nowrap" title="Modificar a toda la ruta de una vez" onclick='modRuta(${JSON.stringify({ ruta: x.ruta, fundo: S.fundo, fecha_retorno: F.fecha }).replace(/'/g, '&#39;')})'><i class="bi bi-skip-backward-fill"></i> Ruta</button>` : ''}</td></tr>`)));
+  r.fechas.forEach(F => { F.fundos.forEach(S => S.rutas.forEach(x => filas.push(`<tr><td><b>${dmy(F.fecha)}</b></td><td><b>${esc(S.fundo)}</b></td><td>${esc(x.ruta)}</td><td>${esc(x.codigo)}</td><td>${dmy(x.fin_sl)}</td><td>${orgChips(x.empresas)}</td><td>${esc(x.estado_retorno)}</td><td class="text-end"><b>${x.cant}</b></td><td class="text-end">${modPuede_() ? `<button class="btn btn-sm btn-outline-primary text-nowrap" title="Modificar solo esta ruta / código (un carro)" onclick='modRuta(${JSON.stringify({ ruta: x.ruta, codigo: x.codigo || '', fundo: S.fundo, fecha_retorno: F.fecha }).replace(/'/g, '&#39;')})'><i class="bi bi-skip-backward-fill"></i> Ruta</button>` : ''}</td></tr>`)));
     filas.push(`<tr class="table-light"><td colspan="7" class="text-end"><b>Total ${dmy(F.fecha)}</b></td><td class="text-end"><b>${F.total}</b></td><td></td></tr>`); });
   $('#tRet tbody').innerHTML = filas.join('') || '<tr><td colspan="9" class="empty"><i class="bi bi-check2-circle"></i>Sin rutas por retornar en el rango</td></tr>';
   const det = r.detalle || [];
   $('#rtDetCount').textContent = det.length ? `(${det.length} registros)` : '';
-  $('#tRetDet tbody').innerHTML = det.map((x, i) => `<tr><td class="text-muted">${i + 1}</td><td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.fundo)}</td><td>${esc(x.ruta)}</td><td>${dmy(x.inicio_sl)}</td><td>${dmy(x.fin_sl)}</td><td><b>${dmy(x.retorno)}</b></td><td>${x.dias ?? ''}</td><td>${esc(x.estado_retorno)}</td></tr>`).join('') || '<tr><td colspan="11" class="empty">Sin detalle</td></tr>';
+  $('#tRetDet tbody').innerHTML = det.map((x, i) => `<tr><td class="text-muted">${i + 1}</td><td>${x.dni}</td><td>${esc(x.nombres)}</td><td>${esc(orgNombre(x.empresa))}</td><td>${esc(x.fundo)}</td><td>${esc(x.ruta)}</td><td>${esc(x.codigo)}</td><td>${dmy(x.inicio_sl)}</td><td>${dmy(x.fin_sl)}</td><td><b>${dmy(x.retorno)}</b></td><td>${x.dias ?? ''}</td><td>${esc(x.estado_retorno)}</td></tr>`).join('') || '<tr><td colspan="12" class="empty">Sin detalle</td></tr>';
   chart('chRetFecha', { type: 'bar', data: { labels: r.fechas.map(F => dmy(F.fecha)), datasets: [{ label: 'Personas', data: r.fechas.map(F => F.total), backgroundColor: COL.blue, borderRadius: 6 }] }, options: { plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { precision: 0 } } } } });
   chart('chRetFundo', { type: 'bar', data: { labels: r.por_fundo.map(f => f.fundo), datasets: [{ label: 'Personas', data: r.por_fundo.map(f => f.cant), backgroundColor: COL.gold, borderRadius: 6 }] }, options: { indexAxis: 'y', plugins: { legend: { display: false } }, scales: { x: { beginAtZero: true, ticks: { precision: 0 } } } } });
 }
@@ -1127,7 +1128,7 @@ function pgPintar_(id) {
     tm = setTimeout(async () => {
       const id = ++ultimo; list.innerHTML = '<div class="nom-it"><small><span class="spinner-border spinner-border-sm"></span> Buscando…</small></div>'; list.classList.add('show');
       try {
-        const r = await cacheGet('nom:' + q.toLowerCase(), () => d1Get('/buscar?q=' + encodeURIComponent(q) + '&limite=30').catch(() => gas('buscarTrabajadores', { q, limite: 30 })));   // v4.0
+        const r = await cacheGet('nom:' + q.toLowerCase(), () => rapida('buscar', { q, limite: 30 }).catch(() => gas('buscarTrabajadores', { q, limite: 30 })));   // v4.3
         if (id !== ultimo) return;
         list.innerHTML = r.filas.map(x => `<div class="nom-it" data-dni="${esc(x.dni)}"><span><b>${esc(x.nombre_completo)}</b><br><small>${esc(x.dni)} · ${esc(orgNombre(x.empresa))} · ${esc(x.centro_costo || '')}</small></span><small>${esc(x.cargo || '')}</small></div>`).join('') || '<div class="nom-it"><small>Sin coincidencias en la base activa</small></div>';
         if (r.mas || r.total > r.filas.length) list.innerHTML += `<div class="nom-it"><small>${r.mas ? 'Hay más coincidencias' : r.total + ' coincidencias'}: escribe más letras para afinar</small></div>`;
@@ -1159,7 +1160,7 @@ async function abrirSalud(refrescar) {
       h += '<h6 class="mt-3">Sincronización</h6><div class="salud-grid">' + (s.sync || []).map(x => tile(esc(orgNombre(x.empresa)), `${(x.filas || 0).toLocaleString('es-PE')} filas<br><small>${esc(x.fecha || 'nunca')}</small>`, x.fecha ? 'ok' : 'bad')).join('') +
         tile('Programación', s.programacion ? `${s.programacion.n.toLocaleString('es-PE')} registros<br><small>última Fecha Doc. ${dmy(s.programacion.ultima)}</small>` : '—') + tile('Sesiones activas', s.sesiones_activas ?? '—') + tile('Lectura de estado', (s.estado_ms || 0) + ' ms', s.estado_ms > 8000 ? 'warn' : 'ok') + '</div>';
       h += '<h6 class="mt-3">Tableros en caché</h6><div class="d-flex flex-wrap gap-2">' + Object.entries(s.tableros).map(([k, v]) => `<span class="stat-chip ${v === 'en caché' ? 'ok' : 'gris'}">${k}: ${v}</span>`).join('') + Object.entries(s.indices || {}).map(([k, v]) => `<span class="stat-chip ${v === 'en caché' ? 'ok' : 'gris'}">índice ${k}: ${v}</span>`).join('') + '</div>';
-      if (s.d1) h += '<h6 class="mt-3">Base de consulta rápida (D1)</h6><div class="salud-grid">' + tile('Servicio', s.d1.ok ? 'Operativo' : 'Con problemas', s.d1.ok ? 'ok' : 'bad') + tile('Trabajadores', (s.d1.trabajadores ?? '—').toLocaleString('es-PE')) + tile('Programaciones', (s.d1.programacion ?? '—').toLocaleString('es-PE')) + (s.d1.sync || []).map(x => tile('Última sync ' + x.tabla, `${esc(x.ultimo)}<br><small>+${x.insertadas} · ~${x.actualizadas} · −${x.eliminadas}</small>`)).join('') + (s.d1.error ? tile('Detalle', esc(s.d1.error), 'bad') : '') + '</div>';
+      if (s.d1) h += '<h6 class="mt-3">Base de consulta rápida (' + esc(s.d1.servicio || 'D1') + ')</h6><div class="salud-grid">' + tile('Servicio', s.d1.ok ? 'Operativo' : 'Con problemas', s.d1.ok ? 'ok' : 'bad') + tile('Trabajadores', (s.d1.trabajadores ?? '—').toLocaleString('es-PE')) + tile('Programaciones', (s.d1.programacion ?? '—').toLocaleString('es-PE')) + (s.d1.sync || []).map(x => tile('Última sync ' + x.tabla, `${esc(x.ultimo)}<br><small>+${x.insertadas} · ~${x.actualizadas} · −${x.eliminadas}</small>`)).join('') + (s.d1.error ? tile('Detalle', esc(s.d1.error), 'bad') : '') + '</div>';
       h += `<div class="hint mt-1">Activadores instalados: ${(s.activadores || []).join(', ') || '<b class="text-danger">ninguno</b> (ejecuta instalarActivadorPrecalentar en Apps Script)'}</div>`;
       if (s.log && s.log.length) h += '<h6 class="mt-3">Operaciones lentas o fallidas (últimas 100 del log técnico)</h6><div class="table-wrap" style="max-height:220px"><table class="table tbl compact"><thead><tr><th>Operación</th><th>Veces</th><th>Prom. ms</th><th>Máx. ms</th><th>Errores</th></tr></thead><tbody>' + s.log.map(x => `<tr><td>${esc(x.op)}</td><td>${x.n}</td><td>${x.prom}</td><td>${x.max}</td><td class="${x.errores ? 'text-danger fw-bold' : ''}">${x.errores}</td></tr>`).join('') + '</tbody></table></div>';
       h += '<h6 class="mt-3">Tiempos de esta sesión (navegador)</h6>' + resumenPerf_();
@@ -1187,6 +1188,7 @@ document.addEventListener('talveniq:reconectado', () => {
 // ======================================================
 async function d1Get(path, reintentoAuth) {
   const s = D1.sesion; const er = m => { const e = new Error(m); e.d1 = true; return e; };
+  if (!D1_ACTIVO) throw er('Base de consulta desactivada');   // v4.2: se usa siempre el respaldo de Apps Script
   if (!s || !s.url || !s.token) throw er('Base de consulta no configurada');
   if (Date.now() < D1.apagadoHasta) throw er('Base de consulta en pausa temporal');
   const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 8000), t0 = performance.now();
@@ -1203,6 +1205,119 @@ async function d1Get(path, reintentoAuth) {
   D1.fallas = 0; telemetria_('d1' + path.split('?')[0].split('/').slice(0, 2).join('/'), ms, 'ok', 0, '', Number(r.headers.get('X-Ms')) || null);
   return j;
 }
+// ======================================================
+// v4.3 — BASE DE CONSULTA RÁPIDA EN SUPABASE (plan gratuito)
+// El login entrega en `d1` { tipo:'supa', url, anon, token, exp }. La web llama a las funciones api_* (RPC);
+// Supabase valida el token firmado por Apps Script. Si falla, cada llamada cae a Apps Script (misma respuesta).
+// ======================================================
+const SUPA_ = { fallas: 0, pausaHasta: 0 };
+async function supaRpc_(fn, args, reintento) {
+  const s = D1.sesion; const er = (m, st) => { const e = new Error(m); e.d1 = true; if (st) e.status = st; return e; };
+  if (!s || s.tipo !== 'supa' || !s.url || !s.token) throw er('Base de consulta no configurada');
+  if (Date.now() < SUPA_.pausaHasta) throw er('Base de consulta en pausa temporal');
+  const ctrl = new AbortController(), tm = setTimeout(() => ctrl.abort(), 8000), t0 = performance.now();
+  const h = { 'Content-Type': 'application/json', apikey: s.anon }; if (/^eyJ/.test(s.anon || '')) h.Authorization = 'Bearer ' + s.anon;
+  let r;
+  try { r = await fetch(s.url + '/rest/v1/rpc/' + fn, { method: 'POST', headers: h, body: JSON.stringify(Object.assign({ p_token: s.token }, args || {})), signal: ctrl.signal }); }
+  catch (e) { clearTimeout(tm); if (++SUPA_.fallas >= 3) { SUPA_.pausaHasta = Date.now() + 120000; SUPA_.fallas = 0; } telemetria_('supa/' + fn, Math.round(performance.now() - t0), 'error', 0, e.message, null, e.name === 'AbortError' ? 'TIMEOUT' : 'RED'); throw er('Sin respuesta del servicio de consulta'); }
+  clearTimeout(tm);
+  const ms = Math.round(performance.now() - t0); let j = null; try { j = await r.json(); } catch {}
+  if (!r.ok) {
+    const msg = (j && (j.message || j.error)) || ('HTTP ' + r.status);
+    if (!reintento && /Sesión vencida|Token inválido|No autenticado/i.test(msg)) {   // token vencido → renovar sesión una vez
+      try { const y = await gas('yo'); if (y && y.d1) { D1.sesion = y.d1; return supaRpc_(fn, args, true); } } catch {}
+    }
+    telemetria_('supa/' + fn, ms, 'error', 0, msg, null, 'HTTP' + r.status); throw er(msg, r.status);
+  }
+  SUPA_.fallas = 0; telemetria_('supa/' + fn, ms, 'ok', 0, '', null); return j;
+}
+// --- cálculos de la ficha (idénticos al servidor) ---
+const RQ_ = {
+  PRUEBA: 90,
+  EMP: 'JEFE|JEFA|SUPERVISOR|COORDINADOR|ASISTENTE|ANALISTA|ADMINISTRADOR|ADMINISTRATIVO|GERENTE|SUBGERENTE|INGENIERO|CONTADOR|SECRETARIA|PRACTICANTE|ESPECIALISTA|SUPERINTENDENTE|DIGITADOR|PLANILLERO|RECLUTADOR|MEDICO|ENFERMER|PSICOLOG|TRABAJADOR SOCIAL|RECURSOS HUMANOS|CONTABILIDAD|SISTEMAS|TESORERIA|LOGISTICA|COMPRAS|CONTROLLER|SUPERVISION'.split('|'),
+  OBR: 'OBRERO|OPERARIO|PEON|COSECHA|EMPAQUE|EMPACADOR|ESTIBADOR|SELECCIONADOR|PACKING|CAMPO|REGADOR|RIEGO|TRACTORISTA|PODADOR|APLICADOR|FUMIGADOR|CUADRILLERO|CAPATAZ|JORNALERO|LIMPIEZA|ALMACEN|EMBALAJE|PALETIZADOR|MONTACARGUISTA|AUXILIAR DE CAMPO|AUXILIAR DE PLANTA'.split('|'),
+  hoy: () => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Lima' }),
+  iso: s => { const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(String(s || '')); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null; },
+  toISO: d => d.toISOString().slice(0, 10),
+  mas: (d, n) => new Date(d.getTime() + n * 86400000),
+};
+function rqAntiguedad_(inicioISO) {
+  const hasta = RQ_.iso(RQ_.hoy()), ini = RQ_.iso(inicioISO); if (!ini) return { anios: null, meses: null, dias: null };
+  let anios = hasta.getUTCFullYear() - ini.getUTCFullYear(), meses = hasta.getUTCMonth() - ini.getUTCMonth(), dias = hasta.getUTCDate() - ini.getUTCDate();
+  if (dias < 0) { meses -= 1; dias += new Date(Date.UTC(hasta.getUTCFullYear(), hasta.getUTCMonth(), 0)).getUTCDate(); }
+  if (meses < 0) { anios -= 1; meses += 12; }
+  return { anios, meses, dias };
+}
+function rqEstado_(inicioISO, declarado) {
+  if (declarado && /indeterminad/i.test(declarado)) return 'INDETERMINADO';
+  const ini = RQ_.iso(inicioISO); if (!ini) return null;
+  const a = rqAntiguedad_(inicioISO);
+  if (Math.round((RQ_.iso(RQ_.hoy()) - ini) / 86400000) <= RQ_.PRUEBA) return 'PERIODO DE PRUEBA';
+  if (a.anios != null && (a.anios > 4 || (a.anios === 4 && a.meses >= 6))) return 'INDETERMINADO';
+  return 'CONTRATO A PLAZO FIJO';
+}
+function rqRegimen_(regimen, cargo) {
+  const r = String(regimen || '').toUpperCase(); if (r.indexOf('OBRERO') === 0) return 'OBRERO';
+  if (r.indexOf('EMPLEADO') >= 0 || r.indexOf('ADMINISTRATIVO') >= 0) return 'EMPLEADO';
+  const c = String(cargo || '').toUpperCase();
+  if (RQ_.EMP.some(p => c.indexOf(p) >= 0)) return 'EMPLEADO'; if (RQ_.OBR.some(p => c.indexOf(p) >= 0)) return 'OBRERO';
+  return 'POR DEFINIR';
+}
+const rqNum_ = v => { const n = Number(v); return isFinite(n) && v !== null && v !== '' ? n : null; };
+function rqFicha_(dni, res) {
+  const hist = (res.historial || []).map(h => Object.assign(h, { anio: rqNum_(h.anio) ?? h.anio, cant_dias: rqNum_(h.cant_dias) ?? h.cant_dias, anios: rqNum_(h.anios) ?? h.anios, meses: rqNum_(h.meses) ?? h.meses, dias: rqNum_(h.dias) ?? h.dias }));
+  let base = res.t, enBase = !!base;
+  if (!base) {
+    if (!hist.length) { const e = new Error('DNI ' + dni + ' no existe en las bases de las organizaciones ni tiene historial. Actualiza las bases si es un ingreso reciente.'); e.status = 404; throw e; }
+    const u = hist[0];
+    base = { dni, empresa: u.empresa, nombre_completo: u.nombres, cargo: u.cargo, centro_costo: u.fundo, direccion: u.direccion, provincia: null, regimen: null, fecha_inicio_periodo: u.f_inicio, fecha_inicio_contrato: u.f_renovacion, fecha_termino_contrato: u.f_termino, sincronizado_en: null, ultimo_registro: u.fecha_doc || u.fecha_firma, ultimo_estatus: u.estatus };
+  }
+  const y = Number(RQ_.hoy().slice(0, 4)), porAnio = {};
+  const acum = hist.filter(h => Number(h.anio) === y && /^SUSPENSI/i.test(h.estatus || '')).reduce((s, h) => s + (Number(h.cant_dias) || 0), 0);
+  hist.forEach(h => { if (!h.anio) return; const p = porAnio[h.anio] = porAnio[h.anio] || { anio: h.anio, fin: 0, sus: 0, se: 0, dias: 0 }; if (h.estatus === 'FINIQUITO') p.fin++; else if (/^SUSPENSI/i.test(h.estatus || '')) { p.sus++; p.dias += Number(h.cant_dias) || 0; } else if (h.estatus === 'SIN EFECTO') p.se++; });
+  return Object.assign({}, base, { en_base: enBase, antiguedad: rqAntiguedad_(base.fecha_inicio_periodo), estado: rqEstado_(base.fecha_inicio_periodo), regimen_clasificado: rqRegimen_(base.regimen, base.cargo), acum_anual: acum, historial: hist, por_anio: Object.values(porAnio).sort((a, b) => b.anio - a.anio), fuente: 'supabase' });
+}
+// --- retornos: misma agrupación que el servidor (fecha → fundo → ruta + código) ---
+function rqRetornos_(filas, desdeISO, dias, conDetalle) {
+  const ini = RQ_.iso(desdeISO || RQ_.hoy()), iniS = RQ_.toISO(ini), lim = RQ_.toISO(RQ_.mas(ini, dias));
+  const porFecha = {}, nominal = [], cmp = (a, b) => { const pa = a.split('\u0001'), pb = b.split('\u0001'); return pa[0].localeCompare(pb[0], 'es') || String(pa[1] || '').localeCompare(String(pb[1] || ''), 'es', { numeric: true }); };
+  filas.forEach(r => {
+    const ret = r.retorno; if (!ret || ret < iniS || ret > lim) return;
+    const fundo = String(r.fundo_zona || r.fundo || '(SIN FUNDO)').trim(), ruta = String(r.ruta || '(SIN RUTA)').trim(), emp = String(r.empresa || '').trim(), cod = String(r.codigo || ''), kR = ruta + '\u0001' + cod;
+    const F = porFecha[ret] = porFecha[ret] || { fecha: ret, total: 0, fundos: {} };
+    const S = F.fundos[fundo] = F.fundos[fundo] || { fundo, total: 0, rutas: {} };
+    const R = S.rutas[kR] = S.rutas[kR] || { ruta, codigo: cod, cant: 0, empresas: {}, fines: {}, estados: {} };
+    F.total++; S.total++; R.cant++;
+    if (r.fecha_fin_sl) R.fines[r.fecha_fin_sl] = 1;
+    if (emp) R.empresas[emp] = (R.empresas[emp] || 0) + 1;
+    if (r.estado_retorno) R.estados[String(r.estado_retorno).trim()] = 1;
+    nominal.push({ dni: r.dni == null ? '' : String(r.dni), nombres: r.nombres, empresa: emp, fundo, ruta, codigo: cod, inicio_sl: r.fecha_inicio_sl, fin_sl: r.fecha_fin_sl, retorno: ret, dias: rqNum_(r.cant_dias) ?? r.cant_dias, estado_retorno: r.estado_retorno || '' });
+  });
+  const fechas = Object.keys(porFecha).sort().map(f => { const F = porFecha[f]; return { fecha: f, total: F.total,
+    fundos: Object.keys(F.fundos).sort().map(sec => { const S = F.fundos[sec]; return { fundo: sec, total: S.total,
+      rutas: Object.keys(S.rutas).sort(cmp).map(k => { const R = S.rutas[k], fines = Object.keys(R.fines).sort(); return { ruta: R.ruta, cant: R.cant, codigo: R.codigo, fin_sl: fines.length ? fines[fines.length - 1] : null, empresas: R.empresas, estado_retorno: Object.keys(R.estados).sort().join(', ') }; }) }; }) }; });
+  const porFundo = {}, porEmp = {}; nominal.forEach(x => { porFundo[x.fundo] = (porFundo[x.fundo] || 0) + 1; if (x.empresa) porEmp[x.empresa] = (porEmp[x.empresa] || 0) + 1; });
+  let rutas = 0; fechas.forEach(F => F.fundos.forEach(S => rutas += S.rutas.length));
+  const out = { desde: iniS, hasta: lim, dias, resumen: { personas: nominal.length, rutas, fechas: fechas.length, fundos: Object.keys(porFundo).length }, fechas,
+    por_fundo: Object.keys(porFundo).sort().map(f => ({ fundo: f, cant: porFundo[f] })), por_empresa: Object.keys(porEmp).sort().map(e => ({ empresa: e, cant: porEmp[e] })), fuente: 'supabase' };
+  if (conDetalle && nominal.every(x => x.dni)) out.detalle = nominal.sort((a, b) => a.retorno.localeCompare(b.retorno) || a.fundo.localeCompare(b.fundo) || a.ruta.localeCompare(b.ruta) || a.codigo.localeCompare(b.codigo, 'es', { numeric: true }) || String(a.nombres || '').localeCompare(String(b.nombres || '')));
+  return out;
+}
+// Punto único de consulta rápida: misma respuesta que Apps Script
+async function rapida(op, p) {
+  p = p || {};
+  if (op === 'buscar') return supaRpc_('api_buscar', { p_q: norm_(p.q), p_limite: p.limite || 30 });
+  if (op === 'trabajador') return rqFicha_(p.dni, await supaRpc_('api_trabajador', { p_dni: String(p.dni) }));
+  if (op === 'listado') return supaRpc_('api_listado', { p: Object.fromEntries(Object.entries(p).map(([k, v]) => [k, v == null ? '' : String(v)])) });
+  if (op === 'suspendidos') { const q = Object.assign({}, p); if (q.vigentes === false) q.vigentes = 'false'; return supaRpc_('api_suspendidos', { p: q }); }
+  if (op === 'retornos') {
+    const dias = Math.min(Math.max(Number(p.dias) || 3, 0), 120), desde = p.desde || RQ_.hoy(), hasta = RQ_.toISO(RQ_.mas(RQ_.iso(desde), dias));
+    return rqRetornos_(await supaRpc_('api_retornos', { p_desde: desde, p_hasta: hasta }), desde, dias, !!p.detalle);
+  }
+  throw new Error('Consulta no soportada: ' + op);
+}
+function norm_(s) { return String(s ?? '').toUpperCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/\s+/g, ' ').trim(); }
+
 // ---------- Consultar registros ----------
 let lsCatalogosOK = false;
 async function prepararListado() {
@@ -1222,14 +1337,14 @@ async function cargarListado(pagina) {
   await ocupado($('#btnListado'), async () => {
     $('#lsMsg').innerHTML = '';
     try {
-      const r = await cacheGet('ls:' + qs, () => d1Get('/listado?' + qs));
-      $('#lsTot').innerHTML = [['Registros', r.total, ''], ['Finiquitos', r.totales.finiquitos, 'bad'], ['Suspensiones', r.totales.suspensiones, ''], ['Sin efecto', r.totales.sin_efecto, 'gris']].map(([t, n, c]) => `<span class="stat-chip ${c}"><b>${Number(n).toLocaleString('es-PE')}</b> ${t}</span>`).join('') + ' <span class="hint">⚡ base de consulta rápida</span>';
+      const r = await cacheGet('ls:' + qs, () => rapida('listado', f).catch(() => gas('listado', f)));   // v4.3: Supabase con respaldo en Google Sheets
+      $('#lsTot').innerHTML = [['Registros', r.total, ''], ['Finiquitos', r.totales.finiquitos, 'bad'], ['Suspensiones', r.totales.suspensiones, ''], ['Sin efecto', r.totales.sin_efecto, 'gris']].map(([t, n, c]) => `<span class="stat-chip ${c}"><b>${Number(n).toLocaleString('es-PE')}</b> ${t}</span>`).join('');
       $('#lsCount').textContent = r.total ? `(${((r.pagina - 1) * r.por + 1).toLocaleString('es-PE')}–${Math.min(r.pagina * r.por, r.total).toLocaleString('es-PE')} de ${r.total.toLocaleString('es-PE')})` : '(0)';
       MOD.lsPag = r.pagina; if (r.pagina === 1) modLimpiarSel(); modRegistrar_('ls', r.filas);   // v4.1
       $('#tLs tbody').innerHTML = r.filas.map(d => `<tr><td>${modChk(d.id)}</td><td><b>${dmy(d.fecha_doc)}</b></td><td>${esc(d.dni)}</td><td>${esc(d.nombres)}</td><td>${esc(orgNombre(d.empresa))}</td><td>${esc(d.fundo_zona)}</td><td>${esc(d.ruta)}</td><td>${esc(d.codigo)}</td><td>${badgeEst(d.estatus)}</td><td class="${/INDETERMINADO/i.test(d.estado || '') ? 'text-danger fw-bold' : ''}">${esc(d.estado)}</td><td>${dmy(d.fecha_inicio_sl)}</td><td>${dmy(d.fecha_fin_sl)}</td><td>${d.cant_dias ?? ''}</td><td>${dmy(d.fecha_retorno)}</td><td>${esc(d.estado_retorno)}</td><td>${esc(d.status02)}</td><td class="text-wrap" style="min-width:200px;font-size:12px">${esc(d.observacion)}</td><td class="text-muted">${esc(d.origen)}</td></tr>`).join('') || '<tr><td colspan="18" class="empty"><i class="bi bi-inbox"></i>Sin registros para esos filtros</td></tr>';
       $('#lsPg').innerHTML = r.total ? `<span class="pg-i" style="margin-left:0">Página ${r.pagina} de ${r.paginas}</span><button class="btn btn-sm btn-outline-secondary" ${r.pagina <= 1 ? 'disabled' : ''} onclick="cargarListado(${r.pagina - 1})">‹ Anterior</button><button class="btn btn-sm btn-outline-secondary" ${r.pagina >= r.paginas ? 'disabled' : ''} onclick="cargarListado(${r.pagina + 1})">Siguiente ›</button>` : '';
     } catch (e) {
-      $('#lsMsg').innerHTML = `<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle-fill"></i> ${e.d1 && !e.status ? 'El servicio de consulta rápida no está disponible en este momento. Usa <b>Programaciones</b> (por Fecha Doc.) o <b>Buscar trabajador</b> mientras se restablece.' : esc(e.message)}</div>`;
+      $('#lsMsg').innerHTML = `<div class="alert alert-warning py-2"><i class="bi bi-exclamation-triangle-fill"></i> ${esc(e.message)}</div>`;
     }
   }, 'Consultando…');
 }
@@ -1391,12 +1506,13 @@ async function pedirRuta() {
 }
 async function modRuta(p) {
   if (!modPuede_()) return;
-  toast(`Buscando suspendidos de la ruta <b>${esc(p.ruta)}</b>…`, 'info', 2500);
+  const etq = p.ruta + (p.codigo !== undefined ? ' · cód. ' + (p.codigo || '(sin código)') : '');   // v4.2: ruta + código = un carro
+  toast(`Buscando suspendidos de la ruta <b>${esc(etq)}</b>…`, 'info', 2500);
   try {
-    const r = await gas('suspendidosRuta', p);
-    if (!r.total) return toast(`La ruta <b>${esc(p.ruta)}</b> no tiene suspendidos ${p.fecha_retorno ? 'con retorno ' + dmy(p.fecha_retorno) : 'vigentes'}${p.fundo ? ' en ' + esc(p.fundo) : ''}`, 'warn', 6000);
+    const r = await rapida('suspendidos', p).catch(() => gas('suspendidosRuta', p));   // v4.3: Supabase con respaldo en Google Sheets
+    if (!r.total) return toast(`La ruta <b>${esc(etq)}</b> no tiene suspendidos ${p.fecha_retorno ? 'con retorno ' + dmy(p.fecha_retorno) : 'vigentes'}${p.fundo ? ' en ' + esc(p.fundo) : ''}`, 'warn', 6000);
     modRegistrar_('ruta', r.filas);
     abrirModificar(r.filas.map(f => Number(f.id)));
-    $('#modTit').textContent = `· Ruta ${p.ruta}${p.fundo ? ' · ' + p.fundo : ''} (${r.total} suspendidos${r.recortado ? ', se muestran 500' : ''})`;
+    $('#modTit').textContent = `· Ruta ${etq}${p.fundo ? ' · ' + p.fundo : ''} (${r.total} suspendidos${r.recortado ? ', se muestran 500' : ''})`;
   } catch (e) { toast(esc(e.message), 'err', 7000); }
 }
