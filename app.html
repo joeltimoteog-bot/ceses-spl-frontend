@@ -658,7 +658,10 @@
     <div class="filter-bar">
       <div class="f-main"><label class="form-label small">Fechas documentarias <span class="text-muted fw-normal">(una o varias, separadas por coma)</span></label><input class="form-control" id="sFechas" placeholder="2026-08-19, 2026-08-20"></div>
       <div><label class="form-label small">Agregar fecha</label><input type="date" class="form-control" id="sPick"></div>
+      <div><label class="form-label small">Rango desde</label><input type="date" class="form-control" id="sDesde"></div>
+      <div><label class="form-label small">Rango hasta</label><input type="date" class="form-control" id="sHasta"></div>
       <div class="f-actions">
+        <button class="btn btn-outline-primary" id="btnRango" onclick="agregarRango()" title="Agrega al campo de fechas todas las Fechas Doc. con registros dentro del rango"><i class="bi bi-calendar-range"></i> Agregar rango</button>
         <button class="btn btn-primary" id="btnConsultar" onclick="cargarResumen()"><i class="bi bi-search"></i> Consultar</button>
         <button class="btn btn-outline-success" data-perm="reportes.exportar" onclick="descargarExcel()"><i class="bi bi-file-earmark-excel"></i> Excel</button>
         <button class="btn btn-gold" data-perm="correos.ver" onclick="vistaCorreo()"><i class="bi bi-envelope-fill"></i> Preparar correo</button>
@@ -709,6 +712,7 @@
       <div class="f-actions">
         <button class="btn btn-primary" id="btnListado" onclick="cargarListado(1)"><i class="bi bi-search"></i> Consultar</button>
         <button class="btn btn-outline-secondary" onclick="limpiarListado()"><i class="bi bi-x-circle"></i> Limpiar</button>
+        <button class="btn btn-outline-success" id="btnLsXls" data-perm="reportes.exportar" onclick="excelListado()" title="Exporta todos los registros que cumplen los filtros (no solo la página visible)"><i class="bi bi-file-earmark-excel"></i> Excel</button>
       </div>
     </div>
     <div class="hint mt-2">Sin filtros se muestran los últimos 90 días. La búsqueda se hace sobre el total de registros, no solo sobre la página visible.</div>

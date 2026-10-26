@@ -424,6 +424,17 @@ async function grabar() {
 // ---------- resumen ----------
 let fechasAct = [];
 $('#sPick').onchange = () => { const v = $('#sPick').value; if (!v) return; const cur = $('#sFechas').value.trim(); $('#sFechas').value = cur ? cur + ', ' + v : v; $('#sPick').value = ''; };
+async function agregarRango() {   // v4.6: rango desde/hasta → solo Fechas Doc. con registros (evita columnas vacías en la dinámica)
+  const d = $('#sDesde').value, h = $('#sHasta').value;
+  if (!d || !h || d > h) return alert('Indica un rango válido: Desde ≤ Hasta');
+  await ocupado($('#btnRango'), async () => {
+    let fechas = [];
+    try { const r = await api('/api/programacion/fechas'); fechas = (Array.isArray(r) ? r : (r.fechas || [])).map(x => x.fecha_doc || x).filter(f => f >= d && f <= h); } catch {}
+    if (!fechas.length) { for (let x = RQ_.iso(d), n = 0; RQ_.toISO(x) <= h && n < 31; x = RQ_.mas(x, 1), n++) fechas.push(RQ_.toISO(x)); }   // respaldo: día a día (máx. 31)
+    const cur = new Set(fechasSel()); fechas.forEach(f => cur.add(f));
+    $('#sFechas').value = [...cur].sort().join(', '); $('#sDesde').value = ''; $('#sHasta').value = '';
+  }, 'Buscando…');
+}
 function fechasSel() {
   return $('#sFechas').value.split(',').map(s => s.trim()).map(s => /^(\d{2})\/(\d{2})\/(\d{4})$/.test(s) ? s.replace(/^(\d{2})\/(\d{2})\/(\d{4})$/, '$3-$2-$1') : s).filter(s => /^\d{4}-\d{2}-\d{2}$/.test(s));
 }
@@ -1353,6 +1364,11 @@ async function cargarListado(pagina) {
   }, 'Consultando…');
 }
 $('#lsQ').addEventListener('keydown', e => { if (e.key === 'Enter') cargarListado(1); });
+function excelListado() {   // v4.6: Excel de Consultar registros con los mismos filtros (todas las filas, sin paginar)
+  const f = filtrosListado(); delete f.por;
+  const btn = $('#btnLsXls');
+  ocupado(btn, () => descargar(Object.assign({ listado: 1 }, f)).catch(e => alert(e.message)), 'Generando…');
+}
 
 // ======================================================================
 // v4.1 — MODIFICAR REGISTROS: retorno anticipado, cambio de medida y ajuste de fechas
