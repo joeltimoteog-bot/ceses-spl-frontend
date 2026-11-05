@@ -487,6 +487,9 @@
     <div class="menu-sec">Configuración</div>
     <a href="#responsables" data-p="responsables" title="Responsables"><i class="bi bi-people-fill"></i><span>Responsables</span></a>
     <a href="#panel" data-p="panel" title="Panel de Control" id="mnuPanel"><i class="bi bi-shield-lock-fill"></i><span>Panel de Control</span></a>
+    <!-- _CONECTA_LINK_V1 (04-nov): acceso a Unifrutti Conecta; sin data-p para no interferir con ir()/permisos. Oculto si CONECTA_URL está vacía. -->
+    <div class="menu-sec" id="secConecta" style="display:none">Ecosistema</div>
+    <a href="#" id="mnuConecta" target="_blank" rel="noopener" title="Unifrutti Conecta" style="display:none"><i class="bi bi-phone-fill"></i><span>Unifrutti Conecta</span></a>
   </nav>
   <div class="sb-foot">
     <div class="user"><div class="avatar" id="avatar">J</div><div class="user-txt"><b id="quien">—</b><span id="rol"></span></div></div>
@@ -609,6 +612,26 @@
 
 <!-- ================= REGISTRO MASIVO ================= -->
 <section class="pantalla" id="p-registro">
+<style id="cesesCorpForm">
+/* _CESES_FORM_CORP_V1 (04-nov) — SOLO presentacion del registro; no cambia ids, handlers ni logica. Revertir: quitar este <style>. */
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
+#p-registro{font-family:Inter,"Segoe UI",Arial,sans-serif;color:#1F2A3C}
+#p-registro .card{border:1px solid #D6DEE9!important;border-radius:8px!important;box-shadow:none!important}
+#p-registro h6{display:flex;align-items:center;gap:8px;background:#EDF1F6;border:1px solid #D6DEE9;border-radius:6px;padding:9px 12px;margin:0 0 14px;font-size:12px;font-weight:700;letter-spacing:.4px;text-transform:uppercase;color:#0F2748}
+#p-registro h6.mt-3{margin-top:18px}
+#p-registro h6 .hint{font-weight:500;text-transform:none;letter-spacing:0;color:#5B6B82;font-size:11px}
+#p-registro h6 .step{display:inline-flex;align-items:center;justify-content:center;width:20px;height:20px;border-radius:5px;background:#0F2748;color:#fff;font-size:11px;font-weight:700}
+#p-registro .form-label{font-size:10.5px!important;font-weight:600!important;letter-spacing:.5px;text-transform:uppercase;color:#5B6B82!important;margin-bottom:4px}
+#p-registro .form-control,#p-registro .form-select{height:40px;border:1px solid #D6DEE9!important;border-radius:6px!important;font-size:14px!important;color:#1F2A3C!important;box-shadow:none!important}
+#p-registro textarea.form-control{height:auto;min-height:92px}
+#p-registro .form-control:focus,#p-registro .form-select:focus{border-color:#0F2748!important;box-shadow:0 0 0 3px rgba(15,39,72,.12)!important}
+#p-registro .btn-success{background:#0F2748!important;border-color:#0F2748!important;font-weight:700;border-radius:6px}
+#p-registro .btn-success:hover{background:#1C3A66!important}
+#p-registro .btn-outline-primary{color:#0F2748!important;border-color:#D6DEE9!important;font-weight:700;border-radius:6px}
+#p-registro .btn-outline-primary:hover{background:#0F2748!important;color:#fff!important;border-color:#0F2748!important}
+#p-registro #rSusp{background:#F7FAFE;border:1px dashed #C3D0E0;border-radius:7px;padding:10px;margin-top:4px}
+#p-registro .stepper .stp.on .num{background:#0F2748}
+</style>
   <div class="stepper">
     <div class="stp on"><div class="num">1</div><div><b>Configurar el lote</b><span>Medida, fechas, fundo y ruta</span></div></div>
     <div class="stp"><div class="num">2</div><div><b>Ingresar y validar los DNI</b><span>Un DNI por línea o separados por coma</span></div></div>
@@ -1083,8 +1106,9 @@
 
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-<script src="config.js?v=4.1"></script>
+<script src="config.js?v=4.1c"></script>
 <script src="brand.js?v=4.1"></script>
 <script src="app.js?v=4.6"></script>
+<script>/* _CONECTA_LINK_V1 */ (function () { try { var u = String(window.CONECTA_URL || "").trim(); if (!/^https:\/\//.test(u)) return; var a = document.getElementById("mnuConecta"), h = document.getElementById("secConecta"); if (!a) return; a.href = u; a.style.display = ""; if (h) h.style.display = ""; } catch (e) {} })();</script>
 </body>
 </html>
