@@ -1048,12 +1048,19 @@
       <input type="radio" class="btn-check" name="modTipo" id="modT1" value="RETORNO_ANTICIPADO"><label class="btn btn-outline-primary" for="modT1"><i class="bi bi-skip-backward-fill"></i> Retorno anticipado</label>
       <input type="radio" class="btn-check" name="modTipo" id="modT2" value="CAMBIO_MEDIDA"><label class="btn btn-outline-primary" for="modT2"><i class="bi bi-arrow-left-right"></i> Cambiar medida</label>
       <input type="radio" class="btn-check" name="modTipo" id="modT3" value="AJUSTE_FECHAS"><label class="btn btn-outline-primary" for="modT3"><i class="bi bi-calendar-range"></i> Ajustar fechas</label>
+      <input type="radio" class="btn-check" name="modTipo" id="modT4" value="EDITAR_DATOS"><label class="btn btn-outline-primary" for="modT4"><i class="bi bi-pencil-fill"></i> Editar datos (fecha, ruta, código, sector)</label><!-- _EDITAR_DATOS_V1 -->
     </div>
     <div class="row g-2 mb-2">
       <div class="col-md-4" id="modWRet"><label class="form-label small">Nueva fecha de retorno (el trabajador se presenta ese día)</label><input type="date" class="form-control" id="modRet"><div class="hint mt-1" id="modRetAtajos"></div></div>
       <div class="col-md-3" id="modWMed"><label class="form-label small">Nueva medida</label><select class="form-select" id="modMedida"><option>SIN EFECTO</option><option>FINIQUITO</option><option>SUSPENSIÓN</option></select></div>
       <div class="col-md-3" id="modWIni"><label class="form-label small">Inicio SL</label><input type="date" class="form-control" id="modIni"></div>
       <div class="col-md-3" id="modWFin"><label class="form-label small">Fin SL</label><input type="date" class="form-control" id="modFin"></div>
+      <div class="col-12" id="modWDat"><div class="row g-2"><!-- _EDITAR_DATOS_V1: vacío = no cambia -->
+        <div class="col-md-3"><label class="form-label small" for="modFdoc">Fecha Doc.</label><input type="date" class="form-control" id="modFdoc"></div>
+        <div class="col-md-3"><label class="form-label small" for="modFundoN">Fundo / sector</label><input class="form-control" id="modFundoN" list="lFundos" autocomplete="off"></div>
+        <div class="col-md-3"><label class="form-label small" for="modRutaN">Ruta</label><input class="form-control" id="modRutaN" list="lRutas" autocomplete="off"></div>
+        <div class="col-md-3"><label class="form-label small" for="modCodN">Código</label><input class="form-control" id="modCodN" autocomplete="off"></div>
+        <div class="col-12 hint">Se aplica a todos los registros de la lista. Un campo vacío no se cambia.</div></div></div>
       <div class="col-md-3" id="modWRetAj"><label class="form-label small">Retorno (opcional)</label><input type="date" class="form-control" id="modRetAj"><div class="hint mt-1">Vacío = siguiente día hábil</div></div>
     </div>
     <div class="mb-2"><label class="form-label small">Motivo <span class="text-danger">*</span></label>
@@ -1110,7 +1117,7 @@
 <script src="config.js?v=4.1c"></script>
 <script src="brand.js?v=4.1"></script>
 <script src="tema-empresarial.js?v=1"></script><!-- _TEMA_EMP_V1: antes de app.js para registrar los números de los gráficos -->
-<script src="app.js?v=4.6"></script>
+<script src="app.js?v=4.7"></script>
 <script src="terminos.js?v=1"></script><!-- _TERMINOS_V1: aceptación obligatoria de términos -->
 <script>/* _CONECTA_LINK_V1 */ (function () { try { var u = String(window.CONECTA_URL || "").trim(); if (!/^https:\/\//.test(u)) return; var a = document.getElementById("mnuConecta"), h = document.getElementById("secConecta"); if (!a) return; a.href = u; a.style.display = ""; if (h) h.style.display = ""; } catch (e) {} })();</script>
 </body>

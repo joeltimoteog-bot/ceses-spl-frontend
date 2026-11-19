@@ -1424,6 +1424,12 @@ function modCalc_(r, p) {   // espejo de calcularModificacion_ (Apps Script)
       if (fin < ini) return { error: 'El fin es anterior al inicio' };
       n.fecha_inicio_sl = ini; n.fecha_fin_sl = fin; n.cant_dias = mdDias_(ini, fin); n.fecha_retorno = mdRetorno_(fin);
     } else { n.fecha_inicio_sl = n.fecha_fin_sl = n.fecha_retorno = n.cant_dias = null; }
+  } else if (p.tipo === 'EDITAR_DATOS') {   // _EDITAR_DATOS_V1: espejo de la rama EDITAR_DATOS del servidor
+    const up = v => String(v ?? '').toUpperCase().trim(), cod_ = v => { const t = up(v); return /^\d+(\.0+)?$/.test(t) ? String(Number(t)) : t; };
+    const fd0 = r.fecha_doc || null, fd = p.nuevo_fecha_doc || fd0, fz = up(p.nuevo_fundo) || up(r.fundo_zona), ruta = up(p.nuevo_ruta) || up(r.ruta), cod = p.nuevo_codigo !== '' ? up(p.nuevo_codigo) : (r.codigo ?? '');
+    if (!fd) return { error: 'El registro no tiene Fecha Doc.: indícala' };
+    if (fd === fd0 && fz === up(r.fundo_zona) && ruta === up(r.ruta) && cod_(cod) === cod_(r.codigo)) return { error: 'Sin cambios en los datos' };
+    return { nuevo: { fecha_doc: fd, fundo_zona: fz, ruta, codigo: cod }, aviso: '' };
   } else return { error: 'Elige el tipo de modificación' };
   if (mdEsSusp_(n.estatus) && n.cant_dias > MOD_TOPE_DIAS) return { error: `La suspensión quedaría en ${n.cant_dias} días (tope ${MOD_TOPE_DIAS})` };
   return { nuevo: n, aviso };
@@ -1447,19 +1453,23 @@ function modCampos_() {
   const t = modTipo_(), sl = t === 'AJUSTE_FECHAS' || (t === 'CAMBIO_MEDIDA' && $('#modMedida').value === 'SUSPENSIÓN');
   const ver = (id, on) => { $(id).style.display = on ? '' : 'none'; };
   ver('#modWRet', t === 'RETORNO_ANTICIPADO'); ver('#modWMed', t === 'CAMBIO_MEDIDA'); ver('#modWIni', sl); ver('#modWFin', sl); ver('#modWRetAj', t === 'AJUSTE_FECHAS');
+  ver('#modWDat', t === 'EDITAR_DATOS');   // _EDITAR_DATOS_V1
 }
 function modParams_() {
   const t = modTipo_();
-  return { tipo: t, fecha_retorno: t === 'RETORNO_ANTICIPADO' ? $('#modRet').value : (t === 'AJUSTE_FECHAS' ? $('#modRetAj').value : ''), medida: $('#modMedida').value, fecha_inicio_sl: $('#modIni').value, fecha_fin_sl: $('#modFin').value };
+  return { tipo: t, fecha_retorno: t === 'RETORNO_ANTICIPADO' ? $('#modRet').value : (t === 'AJUSTE_FECHAS' ? $('#modRetAj').value : ''), medida: $('#modMedida').value, fecha_inicio_sl: $('#modIni').value, fecha_fin_sl: $('#modFin').value,
+    nuevo_fecha_doc: $('#modFdoc').value, nuevo_fundo: $('#modFundoN').value.trim(), nuevo_ruta: $('#modRutaN').value.trim(), nuevo_codigo: $('#modCodN').value.trim() };   // _EDITAR_DATOS_V1
 }
 const modTxt_ = x => mdEsSusp_(x.estatus)
   ? `${badgeEst(x.estatus)} <small class="text-nowrap">${dmy(x.fecha_inicio_sl)}–${dmy(x.fecha_fin_sl)} · ${x.cant_dias ?? ''} d · ret. <b>${dmy(x.fecha_retorno)}</b></small>`
   : badgeEst(x.estatus) + (x.status02 ? ` <small>${esc(x.status02)}</small>` : '');
+const datTxt_ = x => `<small class="text-nowrap">${dmy(x.fecha_doc) || '—'} · ${esc(x.fundo_zona || x.fundo || '—')} · ${esc(x.ruta || '—')} · cód. ${esc(x.codigo ?? '—')}</small>`;   // _EDITAR_DATOS_V1
 function modPreview() {
   modCampos_(); const p = modParams_(); let ok = 0, err = 0;
+  const txt_ = p.tipo === 'EDITAR_DATOS' ? datTxt_ : modTxt_;   // _EDITAR_DATOS_V1
   $('#tMod tbody').innerHTML = MOD.ids.map(id => {
     const r = MOD.filas.get(id), c = modCalc_(r, p); c.error ? err++ : ok++;
-    return `<tr class="${c.error ? 'text-muted' : ''}"><td>${esc(r.dni)}</td><td>${esc(r.nombres)}</td><td>${esc(r.fundo_zona || r.fundo)} · ${esc(r.ruta)}</td><td>${modTxt_(r)}</td><td>${c.error ? '—' : modTxt_(c.nuevo)}</td>
+    return `<tr class="${c.error ? 'text-muted' : ''}"><td>${esc(r.dni)}</td><td>${esc(r.nombres)}</td><td>${esc(r.fundo_zona || r.fundo)} · ${esc(r.ruta)}</td><td>${txt_(r)}</td><td>${c.error ? '—' : txt_(c.nuevo)}</td>
       <td>${c.error ? `<span class="text-danger small"><i class="bi bi-x-circle"></i> ${esc(c.error)}</span>` : '<span class="text-success small"><i class="bi bi-check-circle-fill"></i> OK</span>' + (c.aviso ? `<div class="text-warning small fw-bold">${esc(c.aviso)}</div>` : '')}</td></tr>`;
   }).join('');
   $('#modRes').innerHTML = `<span class="stat-chip ok"><b>${ok}</b> se modificarán</span>` + (err ? `<span class="stat-chip bad"><b>${err}</b> se omitirán</span>` : '');
@@ -1467,7 +1477,7 @@ function modPreview() {
 }
 function modSetRet(v) { $('#modRet').value = v; modPreview(); }
 function modMotivo(t) { const i = $('#modMotivo'); i.value = i.value.trim() ? i.value.trim() + ' — ' + t : t; i.classList.remove('is-invalid'); i.focus(); }
-function abrirModificar(ids) {
+function abrirModificar(ids, tipoIni) {   // _EDITAR_DATOS_V1: + tipoIni
   if (!modPuede_()) return toast('No cuentas con autorización para modificar registros', 'err');
   ids = (ids || [...MOD.sel]).map(Number).filter(id => MOD.filas.has(id));
   if (!ids.length) return toast('Selecciona al menos un registro', 'warn');
@@ -1475,7 +1485,10 @@ function abrirModificar(ids) {
   const filas = ids.map(id => MOD.filas.get(id)), f0 = filas[0], haySusp = filas.some(r => mdEsSusp_(r.estatus)), uno = ids.length === 1;
   $('#modTit').textContent = uno ? `· ${f0.dni} ${f0.nombres || ''}` : `· ${ids.length} registros`;
   $('#modT1').disabled = $('#modT3').disabled = !haySusp;
-  document.querySelector(`input[name=modTipo][value=${haySusp ? 'RETORNO_ANTICIPADO' : 'CAMBIO_MEDIDA'}]`).checked = true;
+  document.querySelector(`input[name=modTipo][value=${tipoIni || (haySusp ? 'RETORNO_ANTICIPADO' : 'CAMBIO_MEDIDA')}]`).checked = true;
+  { const comun = k => { const v = new Set(filas.map(x => String(x[k] ?? ''))); return v.size === 1 ? [...v][0] : ''; };   // _EDITAR_DATOS_V1: valores actuales (si todos coinciden)
+    $('#modFdoc').value = comun('fecha_doc'); $('#modFundoN').value = comun('fundo_zona'); $('#modRutaN').value = comun('ruta'); $('#modCodN').value = comun('codigo');
+    ['#modFundoN', '#modRutaN', '#modCodN'].forEach(id => { $(id).placeholder = $(id).value ? '' : '(varios valores · vacío = no cambia)'; }); }
   const hoy = mdHoy_(), manana = mdRetorno_(hoy), lunes = (() => { let d = MD_.add(MD_.p(hoy), 1); while (d.getUTCDay() !== 1) d = MD_.add(d, 1); return MD_.iso(d); })();
   $('#modRet').value = manana;
   $('#modRetAtajos').innerHTML = `<a href="#" onclick="modSetRet('${manana}');return false">Próximo día hábil (${dmy(manana)})</a> · <a href="#" onclick="modSetRet('${lunes}');return false">Lunes ${dmy(lunes)}</a>`;
@@ -1510,30 +1523,33 @@ function modRefrescar_() {   // vuelve a pintar la vista abierta con los datos y
   if (vis('tDet') && fechasSel().length) cargarResumen();
   if (vis('tHist') && dniAct) buscarDNI();
   if (vis('tLs')) cargarListado(MOD.lsPag || 1);
+  if (vis('tRet')) cargarRetornos();   // _EDITAR_DATOS_V1: la ruta/código editados se ven al instante
 }
-['#modRet', '#modMedida', '#modIni', '#modFin', '#modRetAj'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', modPreview); el.addEventListener('change', modPreview); } });
+['#modRet', '#modMedida', '#modIni', '#modFin', '#modRetAj', '#modFdoc', '#modFundoN', '#modRutaN', '#modCodN'].forEach(id => { const el = $(id); if (el) { el.addEventListener('input', modPreview); el.addEventListener('change', modPreview); } });
 document.querySelectorAll('input[name=modTipo]').forEach(el => el.addEventListener('change', modPreview));
 // v4.1 — MODIFICAR UNA RUTA COMPLETA (p. ej. ruta/código 120 con 40 suspendidos) en un solo paso
 async function pedirRuta() {
   if (!modPuede_()) return toast('No cuentas con autorización para modificar registros', 'err');
   const c = await confirmar({ titulo: 'Modificar una ruta completa', btn: 'Buscar suspendidos',
-    msg: 'Se cargarán <b>todos los suspendidos vigentes</b> (retorno desde hoy) de la ruta, listos para aplicar el retorno anticipado u otro cambio de una sola vez.',
-    extra: '<div class="row g-2"><div class="col-6"><label class="form-label small">Ruta o código <span class="text-danger">*</span></label><input class="form-control" id="mrRuta" list="lRutas" placeholder="Ej.: 120" autocomplete="off"></div><div class="col-6"><label class="form-label small">Fundo / sector (opcional)</label><input class="form-control" id="mrFundo" list="lFundos" placeholder="Todos" autocomplete="off"></div></div>' });
+    msg: 'Sin Fecha Doc. se cargan <b>todos los suspendidos vigentes</b> de la ruta. Con Fecha Doc. se cargan <b>todos los registros</b> de esa ruta en esa fecha (cualquier medida), listos para editar sus datos de una sola vez.',
+    extra: '<div class="row g-2"><div class="col-6"><label class="form-label small">Ruta o código <span class="text-danger">*</span></label><input class="form-control" id="mrRuta" list="lRutas" placeholder="Ej.: 120" autocomplete="off"></div><div class="col-6"><label class="form-label small">Fundo / sector (opcional)</label><input class="form-control" id="mrFundo" list="lFundos" placeholder="Todos" autocomplete="off"></div><div class="col-6"><label class="form-label small">Fecha Doc. (opcional)</label><input type="date" class="form-control" id="mrFdoc"></div></div>' });   // _EDITAR_DATOS_V1: + Fecha Doc.
   if (!c.ok) return;
   const ruta = ($('#mrRuta') || {}).value || '', fundo = ($('#mrFundo') || {}).value || '';
   if (!ruta.trim()) return toast('Indica la ruta o el código', 'warn');
-  modRuta({ ruta: ruta.trim(), fundo: fundo.trim() });
+  const fdoc = ($('#mrFdoc') || {}).value || '';   // _EDITAR_DATOS_V1
+  modRuta(Object.assign({ ruta: ruta.trim(), fundo: fundo.trim() }, fdoc ? { fecha_doc: fdoc } : {}));
 }
 async function modRuta(p) {
   if (!modPuede_()) return;
   const etq = p.ruta + (p.codigo !== undefined ? ' · cód. ' + (p.codigo || '(sin código)') : '');   // v4.2: ruta + código = un carro
   toast(`Buscando suspendidos de la ruta <b>${esc(etq)}</b>…`, 'info', 2500);
   try {
-    const r = await rapida('suspendidos', p).catch(() => gas('suspendidosRuta', p));   // v4.3: Supabase con respaldo en Google Sheets
-    if (!r.total) return toast(`La ruta <b>${esc(etq)}</b> no tiene suspendidos ${p.fecha_retorno ? 'con retorno ' + dmy(p.fecha_retorno) : 'vigentes'}${p.fundo ? ' en ' + esc(p.fundo) : ''}`, 'warn', 6000);
+    const r = p.fecha_doc ? await gas('suspendidosRuta', p) : await rapida('suspendidos', p).catch(() => gas('suspendidosRuta', p));   // v4.3 · _EDITAR_DATOS_V1: con Fecha Doc. va al servidor
+    if (r.error) return toast(esc(r.error), 'err', 6000);
+    if (!r.total) return toast(p.fecha_doc ? `La ruta <b>${esc(etq)}</b> no tiene registros con Fecha Doc. ${dmy(p.fecha_doc)}${p.fundo ? ' en ' + esc(p.fundo) : ''}` : `La ruta <b>${esc(etq)}</b> no tiene suspendidos ${p.fecha_retorno ? 'con retorno ' + dmy(p.fecha_retorno) : 'vigentes'}${p.fundo ? ' en ' + esc(p.fundo) : ''}`, 'warn', 6000);
     modRegistrar_('ruta', r.filas);
-    abrirModificar(r.filas.map(f => Number(f.id)));
-    $('#modTit').textContent = `· Ruta ${etq}${p.fundo ? ' · ' + p.fundo : ''} (${r.total} suspendidos${r.recortado ? ', se muestran 500' : ''})`;
+    abrirModificar(r.filas.map(f => Number(f.id)), p.fecha_doc ? 'EDITAR_DATOS' : undefined);
+    $('#modTit').textContent = `· Ruta ${etq}${p.fundo ? ' · ' + p.fundo : ''}${p.fecha_doc ? ' · Fecha Doc. ' + dmy(p.fecha_doc) : ''} (${r.total} ${p.fecha_doc ? 'registros' : 'suspendidos'}${r.recortado ? ', se muestran 500' : ''})`;
   } catch (e) { toast(esc(e.message), 'err', 7000); }
 }
 
