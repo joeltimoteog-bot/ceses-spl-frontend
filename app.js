@@ -1539,12 +1539,18 @@ async function pedirRuta() {
   const fdoc = ($('#mrFdoc') || {}).value || '';   // _EDITAR_DATOS_V1
   modRuta(Object.assign({ ruta: ruta.trim(), fundo: fundo.trim() }, fdoc ? { fecha_doc: fdoc } : {}));
 }
+async function rutaFechaSupa_(p) {   // _MOD_RAPIDO_V1: todos los registros de una ruta en una Fecha Doc. (páginas de 100, máx. 500)
+  let pag = 1, filas = [], total = 0;
+  do { const x = await rapida('listado', { ruta: p.ruta, fundo: p.fundo || '', desde: p.fecha_doc, hasta: p.fecha_doc, por: '100', pagina: pag });
+    total = Number(x.total) || 0; filas = filas.concat(x.filas || []); pag++; } while (filas.length < total && pag <= 5);
+  return { total, filas, recortado: total > filas.length };
+}
 async function modRuta(p) {
   if (!modPuede_()) return;
   const etq = p.ruta + (p.codigo !== undefined ? ' · cód. ' + (p.codigo || '(sin código)') : '');   // v4.2: ruta + código = un carro
   toast(`Buscando suspendidos de la ruta <b>${esc(etq)}</b>…`, 'info', 2500);
   try {
-    const r = p.fecha_doc ? await gas('suspendidosRuta', p) : await rapida('suspendidos', p).catch(() => gas('suspendidosRuta', p));   // v4.3 · _EDITAR_DATOS_V1: con Fecha Doc. va al servidor
+    const r = p.fecha_doc ? await rutaFechaSupa_(p).catch(() => gas('suspendidosRuta', p)) : await rapida('suspendidos', p).catch(() => gas('suspendidosRuta', p));   // v4.3 · _MOD_RAPIDO_V1: ruta + Fecha Doc. desde Supabase (antes ~15-24 s en Google Sheets)
     if (r.error) return toast(esc(r.error), 'err', 6000);
     if (!r.total) return toast(p.fecha_doc ? `La ruta <b>${esc(etq)}</b> no tiene registros con Fecha Doc. ${dmy(p.fecha_doc)}${p.fundo ? ' en ' + esc(p.fundo) : ''}` : `La ruta <b>${esc(etq)}</b> no tiene suspendidos ${p.fecha_retorno ? 'con retorno ' + dmy(p.fecha_retorno) : 'vigentes'}${p.fundo ? ' en ' + esc(p.fundo) : ''}`, 'warn', 6000);
     modRegistrar_('ruta', r.filas);
