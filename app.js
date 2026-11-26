@@ -158,9 +158,15 @@ async function api(url, opt = {}) {
   if (path === '/api/correo/enviar') return gas('correoEnviar', body);
   throw new Error('Ruta no soportada: ' + url);
 }
+// _DESCARGA_V1 (25-nov-2026): antes se usaba window.open después de esperar al servidor (15-25 s) y el navegador lo bloqueaba
+// como ventana emergente. Ahora la descarga va por un marco oculto (no es ventana) y queda un enlace por si el navegador no la inicia.
+function abrirArchivo_(url, nombre) {
+  try { const f = document.createElement('iframe'); f.style.display = 'none'; f.src = url; document.body.appendChild(f); setTimeout(() => f.remove(), 120000); } catch {}
+  toast(`<b>${esc(nombre || 'Archivo')}</b> listo. Si no empezó la descarga, <a href="${esc(url)}" target="_blank" rel="noopener">haz clic aquí</a>.`, 'ok', 15000);
+}
 async function descargar(params) {   // Excel: el backend genera el archivo en Drive y devuelve el enlace
   const r = await gas('excelUrl', params);
-  window.open(r.url, '_blank');
+  abrirArchivo_(r.url, r.nombre);   // _DESCARGA_V1
 }
 const badgeEst = e => {
   const m = { 'FINIQUITO': 'danger', 'SUSPENSIÓN': 'warning text-dark', 'SIN EFECTO': 'secondary' };
@@ -899,7 +905,7 @@ async function cargarAuditoria() {
   } catch (e) { $('#tAud tbody').innerHTML = `<tr><td colspan="10" class="empty text-danger">${esc(e.message)}</td></tr>`; }
 }
 async function exportarAuditoria() {
-  try { const f = { usuario: $('#aUsuario').value.trim(), modulo: $('#aModulo').value, accion: $('#aAccion').value.trim(), resultado: $('#aResultado').value, desde: $('#aDesde').value, hasta: $('#aHasta').value }; const r = await gas('auditoriaExcel', { filtros: f, limite: 2000 }); window.open(r.url, '_blank'); toast('Exportación generada'); } catch (e) { toast(e.message, 'err'); }
+  try { const f = { usuario: $('#aUsuario').value.trim(), modulo: $('#aModulo').value, accion: $('#aAccion').value.trim(), resultado: $('#aResultado').value, desde: $('#aDesde').value, hasta: $('#aHasta').value }; const r = await gas('auditoriaExcel', { filtros: f, limite: 2000 }); abrirArchivo_(r.url, r.nombre || 'Auditoría'); /* _DESCARGA_V1 */ } catch (e) { toast(e.message, 'err'); }
 }
 
 // ---------- Seguridad y sesiones ----------
@@ -1098,7 +1104,7 @@ async function exportarRetornos(formato, btn) {
   if (btn) { btn.disabled = true; btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Generando…'; }
   try {
     const r = await gas('retornosExportar', Object.assign({ formato }, rtParams()));
-    window.open(r.url, '_blank'); toast((formato === 'pdf' ? 'PDF' : 'Excel') + ' generado: ' + esc(r.nombre));
+    abrirArchivo_(r.url, r.nombre || (formato === 'pdf' ? 'PDF' : 'Excel'));   // _DESCARGA_V1
   } catch (e) { toast(e.message, 'err', 7000); }
   if (btn) { btn.disabled = false; btn.innerHTML = html; }
 }
